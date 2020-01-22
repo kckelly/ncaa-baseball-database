@@ -27,7 +27,8 @@ def get_team_stats(year, division):
     """
     ids = Database.get_year_info(year)
     year_id = ids[0]
-    
+    team_info = []
+
     for stat_id in ids[1:]:
         print('Getting team {stat_type} stats for {year} division {division}... '
               .format(stat_type=stat_types[stat_id - ids[1]], year=year, division=division),
@@ -40,10 +41,10 @@ def get_team_stats(year, division):
         table_header = table.select_one('tr', {'style': 'background: white;'})
         
         header = [th.text for th in table_header.select('th')]
+        header.insert(1, 'school_id')
         
         team_dict = dict()
         stats = []
-        team_info = []
         
         for row in table.select('tr')[1:-1]:
             cols = row.select('td')
@@ -56,11 +57,17 @@ def get_team_stats(year, division):
                 team_stats = []
                 for col in cols:
                     team_stats.append(col.text.strip())
-                if team_name != 'National Totals':
-                    if cols[0].select_one('a') is not None:
-                        team_info.append([team_name, row.select_one('a').attrs.get('href')])
-                    else:
-                        team_info.append([team_name, None])
+                
+                # get school id
+                try:
+                    team_url = row.select_one('a').attrs.get('href')
+                    school_id = WebUtils.get_school_id_from_url(team_url)
+                    team_stats.insert(1, school_id)
+                    if stat_id == ids[1]:
+                        team_info.append([team_name, school_id])
+                except AttributeError:
+                    team_stats.insert(1, None)
+                    
                 stats.append(team_stats)
 
         # length - 1 since the list should include the national totals as well
@@ -73,8 +80,8 @@ def get_team_stats(year, division):
             writer.writerow(header)
             writer.writerows(stats)
         
-        file_name = FileUtils.get_file_name(year, division, 'teams')
-        with open(file_name, 'wb') as file:
-            writer = unicodecsv.writer(file)
-            writer.writerow(['team', 'url'])
-            writer.writerows(team_info)
+    file_name = FileUtils.get_file_name(year, division, 'teams')
+    with open(file_name, 'wb') as file:
+        writer = unicodecsv.writer(file)
+        writer.writerow(['team', 'school_id'])
+        writer.writerows(team_info)
