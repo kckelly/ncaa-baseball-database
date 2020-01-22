@@ -1,8 +1,8 @@
-@choice /M "Are you sure you want to create database?"
+@choice /M "Are you sure you want to add all tables?"
 @if %ERRORLEVEL% == 2 GOTO END
 @if %ERRORLEVEL% == 1 GOTO YES
 :YES
-@ECHO Creating Database...
+@ECHO Adding all Tables to Database...
 copy /b /y table-definitions\year_info.sql + ^
 table-definitions\conference.sql + ^
 table-definitions\school.sql + ^
@@ -20,8 +20,8 @@ table-definitions\pitching_line.sql + ^
 table-definitions\fielding_line.sql + ^
 table-definitions\umpire.sql + ^
 table-definitions\game_umpire.sql + ^
-csv-data\copy.sql ^
-create.sql
-psql -f create.sql ncaabaseball
+copy.sql ^
+add_tables.sql
+psql -f add_tables.sql ncaa_baseball
 pause
 :END
