@@ -47,6 +47,6 @@ def get_all_logos():
     logo_csv_name = 'scraped-data/logos/logo_list.csv'
     with open(logo_csv_name, 'wb') as logo_csv:
         writer = unicodecsv.writer(logo_csv)
-        writer.writerow(['school', 'size', 'logo'])
+        writer.writerow(['school_name', 'size', 'logo'])
         writer.writerows(logo_list)
     print('{} logos found out of {}'.format(logo_count, len(logo_list)))
