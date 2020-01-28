@@ -31,7 +31,7 @@ def get_year_info(year):
     Get the ids for the year specified.
     
     @param year: the year to get the ids of
-    @return: a list containing the year id, hitting id, pitching id, and fielding id for that year
+    @return: a dict containing the year_id, hitting_id, pitching_id, and fielding_id for that year
     """
     connection = connect()
     cursor = connection.cursor()
@@ -40,4 +40,4 @@ def get_year_info(year):
                    'WHERE year={year}'.format(year=year))
     ids = list(cursor.fetchone())
     connection.close()
-    return ids
+    return {'year_id': ids[0], 'hitting_id': ids[1], 'pitching_id': ids[2], 'fielding_id': ids[3]}
