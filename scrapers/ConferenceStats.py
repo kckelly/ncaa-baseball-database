@@ -30,7 +30,7 @@ def get_conference_stats(year, division):
     conference_info = []
     
     for stat_type in stat_types:
-        conference_stats_file_name = FileUtils.get_file_name(year, division, base_file_name.format(
+        conference_stats_file_name = FileUtils.get_scrape_file_name(year, division, base_file_name.format(
                 stat_type=stat_type))
         with open(conference_stats_file_name, 'wb') as conference_stats_file:
             conference_stats_writer = unicodecsv.writer(conference_stats_file)
@@ -67,8 +67,8 @@ def get_conference_stats(year, division):
             print('{num_conferences} conferences found.'.format(num_conferences=
                                                                 len(conference_dict) - 1))
     
-    conferences_file_name = FileUtils.get_file_name(year, division, 'conferences')
+    conferences_file_name = FileUtils.get_scrape_file_name(year, division, 'conferences')
     with open(conferences_file_name, 'wb') as file:
         conferences_writer = unicodecsv.writer(file)
-        conferences_writer.writerow(['conference_name', 'conference_id'])
+        conferences_writer.writerow(['conference_name'])
         conferences_writer.writerows(conference_info)
