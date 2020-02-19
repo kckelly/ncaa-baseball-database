@@ -6,5 +6,6 @@ CREATE TABLE team
   school_id int NOT NULL REFERENCES school,
   coach_id int REFERENCES coach,
   stadium_id int REFERENCES stadium,
-  UNIQUE (year, conference_id, school_id)
+  UNIQUE (year, conference_id, school_id),
+  UNIQUE (year, school_id)
 );

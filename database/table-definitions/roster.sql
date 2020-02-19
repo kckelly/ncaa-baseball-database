@@ -1,4 +1,4 @@
-CREATE TYPE class AS ENUM ('freshman', 'sophomore', 'junior', 'senior');
+CREATE TYPE class AS ENUM ('n/a','freshman', 'sophomore', 'junior', 'senior');
 
 CREATE TABLE roster
 (

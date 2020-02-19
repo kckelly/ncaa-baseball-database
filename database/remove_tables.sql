@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS game_umpire;
 DROP TABLE IF EXISTS umpire;
+DROP TYPE IF EXISTS ump_pos CASCADE;
 DROP TABLE IF EXISTS fielding_line;
 DROP TABLE IF EXISTS pitching_line;
 DROP TABLE IF EXISTS hitting_line;
