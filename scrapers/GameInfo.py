@@ -19,26 +19,24 @@ def get_game_info(year, division):
     Get game information for each game in a year in a specified division. This information
     includes inning scores, umpires, attendance, etc.
     
-    @param year: the year to get games from
-    @param division: the division the games were played at
-    @return: None
+    :param year: the year to get games from
+    :param division: the division the games were played at
+    :return: None
     """
     game_set = set()
     games = DataUtils.get_games_from_schedule(year, division)
+    schools = DataUtils.get_school_id_dict()
     
     game_info_header = ['game_url', 'game_id', 'away_school_name', 'away_school_id',
-                        'home_school_name', 'home_school_id', 'game_code', 'date', 'location',
-                        'attendance', 'hp_official', '1b_official', '2b_official', '3b_official',
-                        'weather', 'other']
+                        'away_team_sport_id', 'home_school_name', 'home_school_id',
+                        'home_team_sport_id', 'game_code', 'date', 'location', 'attendance',
+                        'hp_official', '1b_official', '2b_official', '3b_official', 'weather',
+                        'other']
     
-    game_info_file_name = FileUtils.get_file_name(year, division, 'game_info')
-    if os.path.exists(game_info_file_name):
-        with open(game_info_file_name) as game_info_file:
-            num_lines = sum(1 for row in game_info_file)
-    else:
-        num_lines = 0
+    game_info_file_name = FileUtils.get_scrape_file_name(year, division, 'game_info')
+    num_lines = FileUtils.get_num_file_lines(game_info_file_name)
     
-    innings_file_name = FileUtils.get_file_name(year, division, 'game_innings')
+    innings_file_name = FileUtils.get_scrape_file_name(year, division, 'game_innings')
     with open(innings_file_name, 'ab') as innings_file, open(game_info_file_name, 'ab') as \
             game_info_file:
         innings_writer = unicodecsv.writer(innings_file)
@@ -81,18 +79,38 @@ def get_game_info(year, division):
             home_innings = innings.select('tr')[2]
             
             away_school = away_innings.select_one('td').text.strip()
+            
+            # This dict is for some of the errors in the game info pages, for some reason these
+            # do not always match the school name the ncaa has
+            name_changes = {'Incarnate Word': 'UIW', 'LIU Brooklyn': 'LIU',
+                            'Coastal Caro.': 'Coastal Carolina', 'Loyola Marymount': 'LMU (CA)'}
+            if away_school in name_changes:
+                away_school = name_changes[away_school]
+                
+            try:
+                away_school_id = schools[away_school]
+            except KeyError:
+                away_school_id = None
+                
+            home_school = home_innings.select_one('td').text.strip()
+            if home_school in name_changes:
+                home_school = name_changes[home_school]
+                
+            try:
+                home_school_id = schools[home_school]
+            except KeyError:
+                home_school_id = None
+                
             try:
                 away_school_url = away_innings.select_one('a').attrs.get('href')
-                away_school_id = WebUtils.get_school_id_from_url(away_school_url)
+                away_team_sport_id = WebUtils.get_school_id_from_url(away_school_url)
             except AttributeError:
-                away_school_id = None
-            
-            home_school = home_innings.select_one('td').text.strip()
+                away_team_sport_id = None
             try:
                 home_school_url = home_innings.select_one('a').attrs.get('href')
-                home_school_id = WebUtils.get_school_id_from_url(home_school_url)
+                home_team_sport_id = WebUtils.get_school_id_from_url(home_school_url)
             except AttributeError:
-                home_school_id = None
+                home_team_sport_id = None
             
             away_runs = [inning.text for inning in away_innings.select('td')[1:-3]]
             home_runs = [inning.text for inning in home_innings.select('td')[1:-3]]
@@ -108,8 +126,10 @@ def get_game_info(year, division):
             game['game_id'] = game_id
             game['away_school'] = away_school
             game['away_school_id'] = away_school_id
+            game['away_team_sport_id'] = away_team_sport_id
             game['home_school'] = home_school
             game['home_school_id'] = home_school_id
+            game['home_team_sport_id'] = home_team_sport_id
             
             game_tables = page.find_all('table',
                                         {"width": "50%", "align": "center", "class": None})

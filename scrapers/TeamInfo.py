@@ -17,32 +17,32 @@ def get_team_info(year, division):
     Get team information about each team in the division that year. This includes stadiums,
     coaches, and schedules. Makes 4 csv files: team websites, stadiums, coaches, and schedules.
     
-    @param year: the year to get team info
-    @param division: the division the teams are in
-    @return: None
+    :param year: the year to get team info
+    :param division: the division the teams are in
+    :return: None
     """
     ids = Database.get_year_info(year)
     teams_list = DataUtils.get_schools(year, division)
     
-    website_file_name = FileUtils.get_file_name(year, division, 'websites')
-    website_header = ['school_name', 'school_id', 'website']
+    team_info_file_name = FileUtils.get_scrape_file_name(year, division, 'team_info')
+    team_info_header = ['school_name', 'school_id', 'nickname', 'website']
     
-    stadium_file_name = FileUtils.get_file_name(year, division, 'stadiums')
+    stadium_file_name = FileUtils.get_scrape_file_name(year, division, 'stadiums')
     stadium_header = ['school_name', 'school_id', 'stadium_name', 'capacity', 'year_built']
     
-    coach_file_name = FileUtils.get_file_name(year, division, 'coaches')
+    coach_file_name = FileUtils.get_scrape_file_name(year, division, 'coaches')
     coach_header = ['school_name', 'school_id', 'coach_name', 'coach_id', 'alma_mater',
                     'year_graduated']
     
-    schedule_file_name = FileUtils.get_file_name(year, division, 'schedules')
+    schedule_file_name = FileUtils.get_scrape_file_name(year, division, 'schedules')
     schedule_header = ['school_name', 'school_id', 'opponent_string', 'opponent_id', 'date',
                        'score_string', 'game_url']
     
-    with open(website_file_name, 'wb') as website_file, open(stadium_file_name, 'wb') as \
+    with open(team_info_file_name, 'wb') as team_info_file, open(stadium_file_name, 'wb') as \
             stadium_file, open(coach_file_name, 'wb') as coach_file, open(schedule_file_name,
                                                                           'wb') as schedule_file:
-        website_writer = unicodecsv.DictWriter(website_file, website_header)
-        website_writer.writeheader()
+        team_info_writer = unicodecsv.DictWriter(team_info_file, team_info_header)
+        team_info_writer.writeheader()
         
         stadium_writer = unicodecsv.DictWriter(stadium_file, stadium_header)
         stadium_writer.writeheader()
@@ -60,14 +60,18 @@ def get_team_info(year, division):
                     school_name=team['school_name']), end='')
             page = WebUtils.get_page(team_url, 0.1, 10)
             
-            # school website
+            # school website and nickname
+            school_info = page.select_one('legend')
+            school_nickname = school_info.text.replace(team['school_name'], '').split('(')[
+                0].strip()
             try:
-                school_website = page.select_one('legend').select_one('a').attrs.get('href')
+                school_website = school_info.select_one('a').attrs.get('href')
             except AttributeError:
                 school_website = None
-            website_writer.writerow({'school_name': team['school_name'],
-                                     'school_id':   team['school_id'],
-                                     'website':     school_website})
+            team_info_writer.writerow({'school_name': team['school_name'],
+                                       'school_id':   team['school_id'],
+                                       'nickname':    school_nickname,
+                                       'website':     school_website})
             
             # stadium information
             stadium_info = page.select_one('#facility_div').select_one('fieldset').text.strip()
@@ -87,7 +91,7 @@ def get_team_info(year, division):
             stadium_writer.writerow(stadium)
             
             # coach information
-            coach_info = page.select_one('#head_coaches_div').select_one('fieldset')
+            coach_info = page.select_one('#head_coaches_div').select('fieldset')[-1]
             coach = {heading: None for heading in coach_header}
             coach['school_name'] = team['school_name']
             coach['school_id'] = team['school_id']
@@ -141,5 +145,5 @@ def get_team_info(year, division):
             stadium_file.flush()
             coach_file.flush()
             schedule_file.flush()
-            website_file.flush()
-            print('{} games found'.format(game_counter))
+            team_info_file.flush()
+            print('{} games found.'.format(game_counter))

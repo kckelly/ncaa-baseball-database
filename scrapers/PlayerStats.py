@@ -18,17 +18,17 @@ def get_player_stats(year, division):
     """
     Get each player's stat line for the specified year and division.
     
-    @param year: the year to get the stats from
-    @param division: the division the players play in
-    @return: None
+    :param year: the year to get the stats from
+    :param division: the division the players play in
+    :return: None
     """
     teams_list = DataUtils.get_schools(year, division)
     ids = Database.get_year_info(year)
     header = []
     for stat_type in stat_types:
         
-        player_stats_file_name = FileUtils.get_file_name(year, division,
-                                                         base_file_name.format(stat_type=stat_type))
+        player_stats_file_name = FileUtils.get_scrape_file_name(year, division,
+                                                                base_file_name.format(stat_type=stat_type))
         with open(player_stats_file_name, 'wb') as player_stats_file:
             player_stats_writer = unicodecsv.writer(player_stats_file)
             
@@ -62,4 +62,4 @@ def get_player_stats(year, division):
                     player_stats_writer.writerow(player)
             
                 player_stats_file.flush()
-                print('{} players found'.format(len(rows) - 3))
+                print('{} players found.'.format(len(rows) - 3))

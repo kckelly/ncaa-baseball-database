@@ -21,9 +21,9 @@ def get_conference_stats(year, division):
     Also creates another csv file containing just the names of the conferences for that year and
     division.
 
-    @param year: the year to scrape
-    @param division: the division of the conferences (1, 2, 3)
-    @return: None
+    :param year: the year to scrape
+    :param division: the division of the conferences (1, 2, 3)
+    :return: None
     """
     ids = Database.get_year_info(year)
     year_id = ids['year_id']
@@ -63,6 +63,8 @@ def get_conference_stats(year, division):
                     for col in cols:
                         conference_stats.append(col.text.strip())
                     conference_stats_writer.writerow(conference_stats)
+                    if stat_type == stat_types[2]:
+                        conference_info.append([conference_name])
             
             print('{num_conferences} conferences found.'.format(num_conferences=
                                                                 len(conference_dict) - 1))
@@ -71,4 +73,4 @@ def get_conference_stats(year, division):
     with open(conferences_file_name, 'wb') as file:
         conferences_writer = unicodecsv.writer(file)
         conferences_writer.writerow(['conference_name'])
-        conferences_writer.writerows(conference_info)
+        conferences_writer.writerows(conference_info[:-1])

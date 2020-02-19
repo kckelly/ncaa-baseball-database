@@ -21,9 +21,9 @@ def get_box_scores(year, division):
     """
     Get all box scores for a given year and division. Creates 3 csvs, in the format box_score_{
     stat_type}.csv.
-    @param year: the year to get games from
-    @param division: the division the games were played at
-    @return: None
+    :param year: the year to get games from
+    :param division: the division the games were played at
+    :return: None
     """
     ids = Database.get_year_info(year)
     
@@ -31,7 +31,7 @@ def get_box_scores(year, division):
     
     for stat_type in stat_types:
         header = []
-        box_score_file_name = FileUtils.get_file_name(year, division, base_file_name.format(
+        box_score_file_name = FileUtils.get_scrape_file_name(year, division, base_file_name.format(
                 stat_type=stat_type))
         
         game_ids = set()

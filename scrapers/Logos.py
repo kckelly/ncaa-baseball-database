@@ -16,10 +16,10 @@ sizes = ['sm', 'lg'] # some schools have both sizes, some only have one or none
 def get_all_logos():
     """
     Scrapes all logos and saves them to scraped-data/logos/{school_name}_{size}.gif
-    @return: None
+    :return: None
     """
-    if not os.path.exists('scraped-data/logos/'):
-        os.makedirs('scraped-data/logos/')
+    if not os.path.exists('../scraped-data/logos/'):
+        os.makedirs('../scraped-data/logos/')
         
     school_id_dict = DataUtils.get_school_id_dict()
     logo_list = []

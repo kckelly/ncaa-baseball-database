@@ -16,9 +16,9 @@ def get_rosters(year, division):
     """
     Get all rosters for the given year and division. Makes a csv called scraped-data/{
     year}/division_{}/rosters.csv
-    @param year: the year to get rosters from
-    @param division: the division of the teams
-    @return: None
+    :param year: the year to get rosters from
+    :param division: the division of the teams
+    :return: None
     """
     ids = Database.get_year_info(year)
     teams_list = DataUtils.get_schools(year, division)
@@ -26,7 +26,7 @@ def get_rosters(year, division):
     players = []
     header = ['school_name', 'school_id', 'player_name', 'player_id', 'jersey_number', 'class']
     
-    roster_file_name = FileUtils.get_file_name(year, division, 'rosters')
+    roster_file_name = FileUtils.get_scrape_file_name(year, division, 'rosters')
     with open(roster_file_name, 'wb') as roster_file:
         roster_writer = unicodecsv.DictWriter(roster_file, header)
         roster_writer.writeheader()
@@ -54,4 +54,4 @@ def get_rosters(year, division):
                 player['class'] = cols[3].text.strip()
                 roster_writer.writerow(player)
             roster_file.flush()
-            print('{} players found'.format(len(rows)))
+            print('{} players found.'.format(len(rows)))

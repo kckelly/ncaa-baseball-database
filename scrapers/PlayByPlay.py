@@ -16,14 +16,14 @@ header = ['game_id', 'school_name', 'school_id', 'inning', 'pbp_type', 'side', '
 def get_play_by_play(year, division):
     """
     Get play by play for the specified year and division.
-    @param year: the year of the games
-    @param division: the division the games were played at
-    @return: None
+    :param year: the year of the games
+    :param division: the division the games were played at
+    :return: None
     """
     games = DataUtils.get_games_from_game_info(year, division)
     game_ids = set()
     
-    play_by_play_file_name = FileUtils.get_file_name(year, division, 'play_by_play')
+    play_by_play_file_name = FileUtils.get_scrape_file_name(year, division, 'play_by_play')
     if os.path.exists(play_by_play_file_name):
         with open(play_by_play_file_name, 'rb') as play_by_play_file:
             play_by_play_reader = unicodecsv.DictReader(play_by_play_file)
