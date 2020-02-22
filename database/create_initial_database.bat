@@ -5,3 +5,4 @@
 @ECHO Creating Database...
 psql -d postgres -c "CREATE DATABASE ncaa_baseball"
 :END
+pause

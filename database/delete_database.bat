@@ -5,3 +5,4 @@
 @ECHO Deleting Database...
 psql -d postgres -c "DROP DATABASE IF EXISTS ncaa_baseball"
 :END
+pause
