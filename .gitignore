@@ -1,5 +1,5 @@
 .idea
 __pycache__
-ncaa_venv
+venv
 scraped-data
 copy-data
