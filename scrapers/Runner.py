@@ -22,9 +22,9 @@ def main():
     
     :return: None
     """
-    SchoolIds.get_school_ids()
+    # SchoolIds.get_school_ids()
     # Logos.get_all_logos()
-    years = range(2012, 2020)
+    years = range(2020, 2021)
     divisions = [1]
     for year in years:
         for division in divisions:
@@ -37,9 +37,9 @@ def main():
             # Rosters.get_rosters(year, division)
             # PlayerStats.get_player_stats(year, division)
             
-            # GameInfo.get_game_info(year, division)  # must run before box scores and play by play
-            # BoxScores.get_box_scores(year, division)
-            # PlayByPlay.get_play_by_play(year, division)
+            GameInfo.get_game_info(year, division)  # must run before box scores and play by play
+            BoxScores.get_box_scores(year, division)
+            PlayByPlay.get_play_by_play(year, division)
 
 
 if __name__ == '__main__':

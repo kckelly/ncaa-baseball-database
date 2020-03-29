@@ -1,5 +1,7 @@
 """
 File to scrape team information, including stadiums, coaches, and schedules.
+
+@author: Kevin Kelly
 """
 
 import unicodecsv
@@ -9,18 +11,19 @@ import Database
 import FileUtils
 import WebUtils
 
-base_url = 'https://stats.ncaa.org'
-
 
 def get_team_info(year, division):
     """
     Get team information about each team in the division that year. This includes stadiums,
-    coaches, and schedules. Makes 4 csv files: team websites, stadiums, coaches, and schedules.
+    coaches, and schedules. Creates 4 csv files in scraped-data: team_info, stadiums, coaches,
+    and schedules.
     
     :param year: the year to get team info
     :param division: the division the teams are in
     :return: None
     """
+    base_url = 'https://stats.ncaa.org'
+    
     ids = Database.get_year_info(year)
     teams_list = DataUtils.get_schools(year, division)
     
@@ -38,9 +41,11 @@ def get_team_info(year, division):
     schedule_header = ['school_name', 'school_id', 'opponent_string', 'opponent_id', 'date',
                        'score_string', 'game_url']
     
-    with open(team_info_file_name, 'wb') as team_info_file, open(stadium_file_name, 'wb') as \
-            stadium_file, open(coach_file_name, 'wb') as coach_file, open(schedule_file_name,
-                                                                          'wb') as schedule_file:
+    with open(team_info_file_name, 'wb') as team_info_file, \
+            open(stadium_file_name, 'wb') as stadium_file, \
+            open(coach_file_name, 'wb') as coach_file, \
+            open(schedule_file_name, 'wb') as schedule_file:
+        
         team_info_writer = unicodecsv.DictWriter(team_info_file, team_info_header)
         team_info_writer.writeheader()
         
@@ -57,7 +62,7 @@ def get_team_info(year, division):
             team_url = base_url + '/team/{school_id}/{year_id}'.format(school_id=team['school_id'],
                                                                        year_id=ids['year_id'])
             print('Getting team information and schedules for {school_name}... '.format(
-                    school_name=team['school_name']), end='')
+                school_name=team['school_name']), end='')
             page = WebUtils.get_page(team_url, 0.1, 10)
             
             # school website and nickname
@@ -69,9 +74,9 @@ def get_team_info(year, division):
             except AttributeError:
                 school_website = None
             team_info_writer.writerow({'school_name': team['school_name'],
-                                       'school_id':   team['school_id'],
-                                       'nickname':    school_nickname,
-                                       'website':     school_website})
+                                       'school_id': team['school_id'],
+                                       'nickname': school_nickname,
+                                       'website': school_website})
             
             # stadium information
             stadium_info = page.select_one('#facility_div').select_one('fieldset').text.strip()
@@ -132,7 +137,7 @@ def get_team_info(year, division):
                 game['opponent_string'] = game_details[1].text.strip()
                 try:
                     game['opponent_id'] = WebUtils.get_school_id_from_url(
-                            game_details[1].select_one('a').attrs.get('href'))
+                        game_details[1].select_one('a').attrs.get('href'))
                 except AttributeError:
                     game['opponent_id'] = None
                 game['date'] = game_details[0].text.strip()
@@ -142,6 +147,7 @@ def get_team_info(year, division):
                 except AttributeError:
                     game['game_url'] = None
                 schedule_writer.writerow(game)
+
             stadium_file.flush()
             coach_file.flush()
             schedule_file.flush()
