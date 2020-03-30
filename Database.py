@@ -5,6 +5,9 @@ import os
 import sys
 
 import psycopg2
+import unicodecsv
+
+import FileUtils
 
 
 def connect():
@@ -83,11 +86,12 @@ def get_all_schools():
     """
     connection = connect()
     cursor = connection.cursor()
-    cursor.execute('SELECT id, ncaa_id, name '
+    cursor.execute('SELECT id, ncaa_id, name, nickname, url '
                    'FROM school;')
     schools = []
     for row in cursor:
-        schools.append({'id': row[0], 'ncaa_id': row[1], 'name': row[2]})
+        schools.append({'id': row[0], 'ncaa_id': row[1], 'name': row[2], 'nickname': row[3],
+                        'url': row[4]})
     connection.close()
     return schools
 
@@ -135,9 +139,9 @@ def get_all_teams():
                    'FROM team;')
     teams = []
     for row in cursor:
-        teams.append({'id':        row[0], 'year': row[1], 'conference_id': row[2],
+        teams.append({'id': row[0], 'year': row[1], 'conference_id': row[2],
                       'school_id': row[3],
-                      'coach_id':  row[4], 'stadium_id': row[4]})
+                      'coach_id': row[4], 'stadium_id': row[4]})
     connection.close()
     return teams
 
@@ -163,18 +167,18 @@ def get_all_team_info():
                    '    LEFT JOIN stadium ON team.stadium_id = stadium.id;')
     teams = []
     for row in cursor:
-        teams.append({'team_id':              row[0], 'year': row[1],
-                      'conference_id':        row[2], 'conference_name': row[3], 'division': row[4],
-                      'school_id':            row[5], 'school_ncaa_id': row[6],
-                      'school_name':          row[7],
-                      'school_nickname':      row[8], 'school_url': row[9],
-                      'coach_id':             row[10], 'coach_ncaa_id': row[11],
-                      'coach_first_name':     row[12],
-                      'coach_last_name':      row[11], 'coach_alma_mater': row[12],
+        teams.append({'team_id': row[0], 'year': row[1],
+                      'conference_id': row[2], 'conference_name': row[3], 'division': row[4],
+                      'school_id': row[5], 'school_ncaa_id': row[6],
+                      'school_name': row[7],
+                      'school_nickname': row[8], 'school_url': row[9],
+                      'coach_id': row[10], 'coach_ncaa_id': row[11],
+                      'coach_first_name': row[12],
+                      'coach_last_name': row[11], 'coach_alma_mater': row[12],
                       'coach_year_graduated': row[13],
-                      'stadium_id':           row[14], 'stadium_name': row[15],
-                      'stadium_capacity':     row[16],
-                      'stadium_year_built':   row[17]})
+                      'stadium_id': row[14], 'stadium_name': row[15],
+                      'stadium_capacity': row[16],
+                      'stadium_year_built': row[17]})
     connection.close()
     return teams
 
@@ -211,7 +215,7 @@ def get_all_roster_info():
     roster_rows = []
     for row in cursor:
         roster_rows.append({'roster_id': row[0], 'team_id': row[1], 'player_id': row[2],
-                            'class':     row[3], 'ncaa_id': row[4], 'first_name': row[5],
+                            'class': row[3], 'ncaa_id': row[4], 'first_name': row[5],
                             'last_name': row[6], 'year': row[7]})
     connection.close()
     return roster_rows
@@ -229,7 +233,7 @@ def get_all_game_info():
     games = []
     for row in cursor:
         games.append({'id': row[0], 'ncaa_id': row[1], 'away_team_id': row[2], 'home_team_id':
-                            row[3], 'date': row[4], 'location': row[5], 'attendance': row[6]})
+            row[3], 'date': row[4], 'location': row[5], 'attendance': row[6]})
     connection.close()
     return games
 
@@ -282,6 +286,7 @@ def get_all_box_score_lines(stat_type):
     connection.close()
     return box_score_lines
 
+
 def get_all_umpires():
     """
     Get all umpires from the database.
@@ -331,25 +336,37 @@ def get_all_play_by_play():
     pbp = []
     for row in cursor:
         pbp.append({'game_id': row[0], 'team_id': row[1], 'inning': row[2], 'ord': row[3],
-                    'text':    row[4], 'pitches': row[5]})
+                    'text': row[4], 'pitches': row[5]})
     connection.close()
     return pbp
 
 
-def copy_expert(table_string, file_name):
+def copy_expert(table_string, data_type, file_header, data):
     """
-    Copy a file to the database.
+    Copy data to the database using a csv file as an intermediary.
     :param table_string: the table to copy to, including column names if applicable in the format
     table_name(column1, column2)
-    :param file_name: the name of the csv file to copy
+    :param data_type: the type of the data, such as 'conferences' or 'box_score_hitting' to create
+    and copy
+    :param file_header: the header of the csv file
+    :param data: the data to copy that will be inserted into the csv file via a csv dictwriter.
+    This data must be a list of dicts
     :return: None
     """
+    
+    copy_file_name = FileUtils.get_copy_file_name(data_type)
+    with open(copy_file_name, 'wb') as copy_file:
+        writer = unicodecsv.DictWriter(copy_file, file_header)
+        writer.writeheader()
+        writer.writerows(data)
+        copy_file.flush()
+    
     connection = connect()
     
     cursor = connection.cursor()
     
     cursor.copy_expert("COPY {table_string} from STDIN delimiter ',' NULL AS '' "
-                       "CSV HEADER".format(table_string=table_string), open(file_name))
+                       "CSV HEADER".format(table_string=table_string), open(copy_file_name))
     connection.commit()
     
     connection.close()
@@ -375,8 +392,77 @@ def create_team(year, school_ncaa_id):
                    'RETURNING id;'.format(year=year, conference_id=get_default_conference_id(),
                                           school_id=school_id))
     team_id = cursor.fetchone()[0]
-    
+
     connection.commit()
-    
+
     connection.close()
     return team_id
+
+
+def get_player_year_stats(year, division, stat_type):
+    """
+    Get player year total stats for the specified type.
+    :param year: the year of the stats
+    :param division: the division of the stats
+    :param stat_type: the type of stats ('hitting', 'pitching', 'fielding')
+    :return: an array of dicts, with the dicts being comprised of a mapping of the stat headers
+    to the stat values, ordered by roster id in ascending order
+    """
+    connection = connect()
+    cursor = connection.cursor()
+    headers = {'hitting': ['ab, ', 'h, ', 'dbl, ', 'tpl, ', 'hr, ', 'bb, ', 'ibb, ', 'hbp, ', 'r, ',
+                           'rbi, ', 'k, ', 'sf, ', 'sh, ', 'dp, ', 'sb, ', 'cs'],
+               'pitching': ['app, ', 'gs, ', 'ord, ', 'w, ', 'l, ', 'sv, ', 'ip, ', 'p, ', 'bf, ',
+                            'h, ', 'dbl, ', 'tpl, ', 'hr, ', 'bb, ', 'ibb, ', 'hbp, ', 'r, ',
+                            'er, ', 'ir, ', 'irs, ', 'fo, ', 'go, ', 'k, ', 'kl, ', 'sf, ', 'sh, ',
+                            'bk, ', 'wp, ', 'cg, ', 'sho'],
+               'fielding': ['po, ', 'a, ', 'e, ', 'pb, ', 'ci, ', 'sb, ', 'cs, ', 'dp, ', 'tp']}
+    select_string = 'stats.'.join(headers[stat_type])
+    cursor.execute('SELECT r.id, {select_string} '
+                   'FROM player_year_totals_{stat_type}({year}, {division}) AS stats '
+                   '   JOIN roster AS r ON r.id = stats.roster_id '
+                   'ORDER BY r.id ASC'
+                   .format(select_string=select_string, stat_type=stat_type, year=year,
+                           division=division))
+    stat_rows = []
+    for row in cursor:
+        stats = {'roster_id': row[0]}
+        for index, heading in enumerate(headers[stat_type]):
+            stats[heading.replace(', ', '')] = row[1 + index]
+        stat_rows.append(stats)
+    connection.close()
+    return stat_rows
+
+
+def get_roster_id(year, division, first_name, last_name, school_name):
+    """
+    Get a player's roster id from their first name and last name. Could possibly return the wrong
+    player, since names are not unique, but it is unlikely that two players with the same first
+    name and last name would be on the same team.
+    :param year: the year of the player
+    :param division: the division the player played in
+    :param first_name: the first name of the player
+    :param last_name: the last name of the player
+    :param school_name: the school the player played at
+    :return: the player id of the player or None if the player is not found or if more than one
+    player is found
+    """
+    
+    connection = connect()
+    cursor = connection.cursor()
+    
+    cursor.execute('SELECT r.id '
+                   'FROM roster AS r '
+                   '  JOIN team AS t ON t.id = r.team_id '
+                   '  JOIN player AS p ON p.id = r.player_id '
+                   '  JOIN school AS s ON s.id = t.school_id '
+                   '  JOIN conference AS c ON c.id = t.conference_id '
+                   'WHERE p.first_name = %s '
+                   '  AND p.last_name = %s '
+                   '  AND t.year = %s '
+                   '  AND c.division = %s '
+                   '  AND s.name = %s;', (first_name, last_name, year, division, school_name))
+    player_ids = cursor.fetchmany(2)
+    if len(player_ids) != 1:
+        return None
+    return player_ids[0][0]

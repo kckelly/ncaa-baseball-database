@@ -10,7 +10,7 @@ def get_school_id_dict():
     """
     Return a dict of all school codes, use the school name to get the code for that school.
     
-    :return: a dict of all school codes
+    :return: a dict of all school codes in the format {school_name: school_id}
     """
     file_name = '../scraped-data/school_ids.csv'
     with open(file_name, 'rb') as file:

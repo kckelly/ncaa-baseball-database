@@ -1,5 +1,7 @@
 """
 This file puts all the game information into the game table.
+
+@author: Kevin Kelly
 """
 from datetime import datetime
 import re
@@ -9,22 +11,23 @@ import unicodecsv
 import Database
 import FileUtils
 
-header = ['ncaa_id', 'away_team_id', 'home_team_id', 'date', 'location', 'attendance']
-
 
 def copy_game_info(year, division):
     """
     Copy game information into the game table from this year and division.
+    
     :param year: the year of the games
     :param division: the division the games were played at
     :return: None
     """
     print('Copying games... ', end='')
     
-    all_teams = {(team['year'], team['school_ncaa_id']): team['team_id'] for team in
-                 Database.get_all_team_info()}
+    header = ['ncaa_id', 'away_team_id', 'home_team_id', 'date', 'location', 'attendance']
     
-    current_games = {game['ncaa_id']: game for game in Database.get_all_game_info()}
+    database_teams = {(team['year'], team['school_ncaa_id']): team['team_id'] for team in
+                      Database.get_all_team_info()}
+    
+    database_games = {game['ncaa_id']: game for game in Database.get_all_game_info()}
     
     new_games = []
     
@@ -33,34 +36,37 @@ def copy_game_info(year, division):
         game_info_reader = unicodecsv.DictReader(game_info_file)
         for game in game_info_reader:
             ncaa_id = int(game['game_id'])
-            if ncaa_id in current_games:
+            if ncaa_id in database_games:
                 continue
-            new_game = {heading: None for heading in header}
-            new_game['ncaa_id'] = ncaa_id
+            
             try:
-                new_game['away_team_id'] = all_teams[(year, int(game['away_school_id']))]
+                away_team_id = database_teams[(year, int(game['away_school_id']))]
             except KeyError:
-                new_game['away_team_id'] = Database.create_team(year, game['away_school_id'])
-                all_teams.update({(year, int(game['away_school_id'])): new_game['away_team_id']})
+                away_team_id = Database.create_team(year, game['away_school_id'])
+                database_teams.update({(year, int(game['away_school_id'])): away_team_id})
+            
             try:
-                new_game['home_team_id'] = all_teams[(year, int(game['home_school_id']))]
+                home_team_id = database_teams[(year, int(game['home_school_id']))]
             except KeyError:
-                new_game['home_team_id'] = Database.create_team(year, game['home_school_id'])
-                all_teams.update({(year, int(game['home_school_id'])): new_game['home_team_id']})
+                home_team_id = Database.create_team(year, game['home_school_id'])
+                database_teams.update({(year, int(game['home_school_id'])): home_team_id})
+            
             match = re.search(r'\d{2}/\d{2}/\d{4}', game['date'])
-            new_game['date'] = datetime.strptime(match.group(), '%m/%d/%Y').date()
-            new_game['location'] = game['location']
-            new_game['attendance'] = game['attendance'].replace(',', '')
-            new_games.append(new_game)
-    
-    copy_file_name = FileUtils.get_copy_file_name('game_info')
-    with open(copy_file_name, 'wb') as copy_file:
-        writer = unicodecsv.DictWriter(copy_file, header)
-        writer.writeheader()
-        writer.writerows(new_games)
+            date = datetime.strptime(match.group(), '%m/%d/%Y').date()
+            
+            location = game['location']
+            
+            attendance = game['attendance'].replace(',', '')
+            
+            new_games.append({'ncaa_id': ncaa_id,
+                              'away_team_id': away_team_id,
+                              'home_team_id': home_team_id,
+                              'date': date,
+                              'location': location,
+                              'attendance': attendance})
     
     Database.copy_expert('game(ncaa_id, away_team_id, home_team_id, date, location, attendance)',
-                         copy_file_name)
+                         'game_info', header, new_games)
     
     print('{num_games} new games.'.format(num_games=len(new_games)))
 
@@ -68,18 +74,19 @@ def copy_game_info(year, division):
 def copy_game_innings(year, division):
     """
     Copy each inning of each game into the game_innings table.
+    
     :param year: the year of the games
     :param division: the division the games were played at
     :return: None
     """
     print('Copying innings... ', end='')
     
-    all_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
-    all_teams = {team['school_ncaa_id']: team['team_id'] for team in Database.get_all_team_info()
-                 if team['year'] == year}
+    database_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
+    database_teams = {team['school_ncaa_id']: team['team_id'] for team in
+                      Database.get_all_team_info() if team['year'] == year}
     
-    all_innings = {(inning['game_id'], inning['team_id']): None for
-                   inning in Database.get_all_innings()}
+    database_innings = {(inning['game_id'], inning['team_id']): None for
+                        inning in Database.get_all_innings()}
     
     new_innings = []
     inning_file_name = FileUtils.get_scrape_file_name(year, division, 'game_innings')
@@ -87,32 +94,31 @@ def copy_game_innings(year, division):
         reader = unicodecsv.reader(inning_file)
         next(reader)  # skip header
         for line in reader:
-            game_id = all_games[int(line[1])]
-            team_id = all_teams[int(line[4])]
-            if (game_id, team_id) in all_innings:
+            game_id = database_games[int(line[1])]
+            team_id = database_teams[int(line[4])]
+            if (game_id, team_id) in database_innings:
                 continue
+            
             inning_num = 1
             for inning in line[5:]:
                 if inning == '':
                     continue
                 new_innings.append({'game_id': game_id, 'team_id': team_id, 'inning': inning_num,
-                                    'runs':    inning})
+                                    'runs': inning})
                 inning_num += 1
-            all_innings.update({(game_id, team_id): None})
+            
+            database_innings.update({(game_id, team_id): None})
     
-    copy_file_name = FileUtils.get_copy_file_name('innings')
-    with open(copy_file_name, 'wb') as copy_file:
-        writer = unicodecsv.DictWriter(copy_file, ['game_id', 'team_id', 'inning', 'runs'])
-        writer.writeheader()
-        writer.writerows(new_innings)
+    header = ['game_id', 'team_id', 'inning', 'runs']
+    Database.copy_expert('inning(game_id, team_id, inning, runs)', 'innings', header, new_innings)
     
-    Database.copy_expert('inning(game_id, team_id, inning, runs)', copy_file_name)
     print('{num_innings} new innings.'.format(num_innings=len(new_innings)))
 
 
 def create_game_positions(year, division):
     """
     Create game to position relations for each player from each game in this year and division.
+    
     :param year: the year of the games
     :param division: the division the games were played at
     :return: None
@@ -121,17 +127,24 @@ def create_game_positions(year, division):
     
     positions = ['1b', '2b', '3b', 'ss', 'lf', 'cf', 'rf', 'dh', 'dp', 'ph', 'pr', 'p', 'c']
     
-    all_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
+    database_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
     
-    all_rosters = {roster['ncaa_id']: roster['roster_id'] for roster in
-                   Database.get_all_roster_info() if roster['year'] == year}
+    database_rosters = {roster['ncaa_id']: roster['roster_id'] for roster in
+                        Database.get_all_roster_info() if roster['year'] == year}
     
-    current_game_positions = {(game_position['game_id'], game_position['roster_id']): None for
-                              game_position in Database.get_all_game_position_info()}
+    all_players_by_name = {
+        (roster['first_name'], roster['last_name'], roster['team_id']): roster['roster_id'] for
+        roster in Database.get_all_roster_info() if roster['year'] == year}
+    
+    database_teams = {team['school_name']: team['team_id'] for team in Database.get_all_team_info()
+                      if team['year'] == year}
+    
+    database_game_positions = {(game_position['game_id'], game_position['roster_id']): None for
+                               game_position in Database.get_all_game_position_info()}
     
     box_score_file_name = FileUtils.get_scrape_file_name(year, division, 'box_score_fielding')
     
-    all_positions = []
+    new_positions = []
     
     players_with_bad_id = 0
     
@@ -140,86 +153,106 @@ def create_game_positions(year, division):
         for line in reader:
             if line['Player'] == 'Totals':
                 continue
-            game_id = all_games[int(line['game_id'])]
+            game_id = database_games[int(line['game_id'])]
+            
             try:
-                player_id = all_rosters[int(line['player_id'])]
+                roster_id = database_rosters[int(line['player_id'])]
             except ValueError:
                 continue
             except KeyError:
+                roster_id = all_players_by_name.get((line['Player'].split(',', 1)[1].strip(),
+                                                     line['Player'].split(',', 1)[0].strip(),
+                                                     database_teams[line['school_name']]))
+            if roster_id is None:
                 players_with_bad_id += 1
                 continue
-            if (game_id, player_id) in current_game_positions:
+            
+            if (game_id, roster_id) in database_game_positions:
                 continue
+            
             player_positions = []
             position_string = line['Pos'].lower()
             if position_string == '':
                 player_positions.append('n/a')
             else:
+                # Gets all positions a player played in a game by removing positions from the
+                # position string one by one. For instance a position_string that looks like
+                # 'prlf' will return ['pr', 'lf'].
                 for position in positions:
                     position_string = re.subn(position, '', position_string)
                     if position_string[1] > 0:
+                        # designated hitter is written as dp or designated player in some box scores
                         if position == 'dp':
                             player_positions.append('dh')
                         else:
                             player_positions.append(position)
-                    position_string = position_string[0]
+                    position_string = position_string[0]  # gets the old position string without
+                    # the position we just found
+                    # if the position string is empty or contains just a slash all positions have
+                    # been found
                     if position_string == '' or position_string == '/':
                         break
+            
             for position in player_positions:
-                all_positions.append({'game_id':  game_id, 'roster_id': player_id,
+                new_positions.append({'game_id': game_id,
+                                      'roster_id': roster_id,
                                       'position': position})
-            current_game_positions.update({(game_id, player_id): None})
+            database_game_positions.update({(game_id, roster_id): None})
     
-    position_file_name = FileUtils.get_copy_file_name('positions')
-    with open(position_file_name, 'wb') as position_file:
-        writer = unicodecsv.DictWriter(position_file, ['game_id', 'roster_id', 'position'])
-        writer.writeheader()
-        writer.writerows(all_positions)
-    
-    Database.copy_expert('game_position(game_id, roster_id, position)', position_file_name)
+    header = ['game_id', 'roster_id', 'position']
+    Database.copy_expert('game_position(game_id, roster_id, position)', 'positions', header,
+                         new_positions)
     
     print('{num_positions} position relations created, {bad_ids} players with bad id.'.format(
-            num_positions=len(all_positions), bad_ids=players_with_bad_id))
+        num_positions=len(new_positions), bad_ids=players_with_bad_id))
 
 
 def copy_box_score_lines(year, division):
     """
     Copy each box score type for this year and division into the corresponding stat line table in
     the database.
+    
     :param year: the year of the games
     :param division: the division the games were played at
     :return: None
     """
     
     ncaa_stat_headers = {
-            'hitting':  ['ab', 'h', '2b', '3b', 'hr', 'bb', 'ibb', 'hbp', 'r', 'rbi', 'k', 'sf',
-                         'sh', 'dp', 'sb', 'cs'],
-            'pitching': ['app', 'gs', 'ordappeared', 'w', 'l', 'sv', 'ip', 'pitches', 'bf', 'h',
-                         '2b-a', '3b-a', 'hr-a', 'bb', 'ibb', 'hb', 'r', 'er', 'inh run',
-                         'inh run score', 'fo', 'go', 'so', 'kl', 'sfa', 'sha', 'bk', 'wp', 'cg',
-                         'sho'],
-            'fielding': ['po', 'a', 'e', 'pb', 'ci', 'sba', 'csb', 'idp', 'tp']}
+        'hitting': ['ab', 'h', '2b', '3b', 'hr', 'bb', 'ibb', 'hbp', 'r', 'rbi', 'k', 'sf',
+                    'sh', 'dp', 'sb', 'cs'],
+        'pitching': ['app', 'gs', 'ordappeared', 'w', 'l', 'sv', 'ip', 'pitches', 'bf', 'h',
+                     '2b-a', '3b-a', 'hr-a', 'bb', 'ibb', 'hb', 'r', 'er', 'inh run',
+                     'inh run score', 'fo', 'go', 'so', 'kl', 'sfa', 'sha', 'bk', 'wp', 'cg',
+                     'sho'],
+        'fielding': ['po', 'a', 'e', 'pb', 'ci', 'sba', 'csb', 'idp', 'tp']}
     database_stat_headers = {
-            'hitting':  ['ab', 'h', 'dbl', 'tpl', 'hr', 'bb', 'ibb', 'hbp', 'r', 'rbi', 'k', 'sf',
-                         'sh', 'dp', 'sb', 'cs'],
-            'pitching': ['app', 'gs', 'ord', 'w', 'l', 'sv', 'ip', 'p', 'bf', 'h', 'dbl', 'tpl',
-                         'hr', 'bb', 'ibb', 'hbp', 'r', 'er', 'ir', 'irs', 'fo', 'go', 'k', 'kl',
-                         'sf', 'sh', 'bk', 'wp', 'cg', 'sho'],
-            'fielding': ['po', 'a', 'e', 'pb', 'ci', 'sb', 'cs', 'dp', 'tp']}
+        'hitting': ['ab', 'h', 'dbl', 'tpl', 'hr', 'bb', 'ibb', 'hbp', 'r', 'rbi', 'k', 'sf',
+                    'sh', 'dp', 'sb', 'cs'],
+        'pitching': ['app', 'gs', 'ord', 'w', 'l', 'sv', 'ip', 'p', 'bf', 'h', 'dbl', 'tpl',
+                     'hr', 'bb', 'ibb', 'hbp', 'r', 'er', 'ir', 'irs', 'fo', 'go', 'k', 'kl',
+                     'sf', 'sh', 'bk', 'wp', 'cg', 'sho'],
+        'fielding': ['po', 'a', 'e', 'pb', 'ci', 'sb', 'cs', 'dp', 'tp']}
     
-    all_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
+    database_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
     
-    all_rosters = {roster['ncaa_id']: roster['roster_id'] for roster in
-                   Database.get_all_roster_info() if roster['year'] == year}
+    database_rosters = {roster['ncaa_id']: roster['roster_id'] for roster in
+                        Database.get_all_roster_info() if roster['year'] == year}
+    
+    all_players_by_name = {
+        (roster['first_name'], roster['last_name'], roster['team_id']): roster['roster_id'] for
+        roster in Database.get_all_roster_info() if roster['year'] == year}
+    
+    database_teams = {team['school_name']: team['team_id'] for team in Database.get_all_team_info()
+                      if team['year'] == year}
     
     for stat_type in ['hitting', 'pitching', 'fielding']:
         print('Copying {stat_type} box scores... '.format(stat_type=stat_type), end='')
         
-        current_box_score_lines = {(line[0], line[1]): None for
-                                   line in Database.get_all_box_score_lines(stat_type)}
+        database_box_score_lines = {(line[0], line[1]): None for
+                                    line in Database.get_all_box_score_lines(stat_type)}
         
-        box_score_file_name = FileUtils.get_scrape_file_name(year, division, 'box_score_' +
-                                                             stat_type)
+        stat_file_name = 'box_score_' + stat_type
+        box_score_file_name = FileUtils.get_scrape_file_name(year, division, stat_file_name)
         
         new_box_score_lines = []
         
@@ -231,43 +264,52 @@ def copy_box_score_lines(year, division):
             for line in reader:
                 if line['player'] == 'Totals':
                     continue
-                game_id = all_games[int(line['game_id'])]
+                
+                game_id = database_games[int(line['game_id'])]
+                
                 try:
-                    player_id = all_rosters[int(line['player_id'])]
+                    roster_id = database_rosters[int(line['player_id'])]
                 except ValueError:
                     continue
                 except KeyError:
+                    roster_id = all_players_by_name.get((line['player'].split(',', 1)[1].strip(),
+                                                         line['player'].split(',', 1)[0].strip(),
+                                                         database_teams[line['school_name']]))
+                if roster_id is None:
                     players_with_bad_id += 1
                     continue
-                if (game_id, player_id) in current_box_score_lines:
+                
+                if (game_id, roster_id) in database_box_score_lines:
                     continue
+                
                 player_stats = {heading: None for heading in database_stat_headers[stat_type]}
-                player_stats.update({'game_id':   game_id,
-                                     'roster_id': player_id})
+                player_stats.update({'game_id': game_id,
+                                     'roster_id': roster_id})
                 for i, stat in enumerate(ncaa_stat_headers[stat_type]):
                     try:
                         if line[stat] == '':
                             line[stat] = 0
                     except KeyError:
+                        # not all years have the same statistics, if that stat was not kept for
+                        # this box score then we just set the value of the statistic to None
                         player_stats[database_stat_headers[stat_type][i]] = None
                         continue
                     try:
                         player_stats[database_stat_headers[stat_type][i]] = int(line[stat])
                     except ValueError:
+                        # sometimes stats have non-numerical characters like '-' and ',',
+                        # we remove them with this regex if the previous cast results in a
+                        # ValueError
                         player_stats[database_stat_headers[stat_type][i]] = re.sub(r'[^\d.]', '',
                                                                                    line[stat])
+                
                 new_box_score_lines.append(player_stats)
-                current_box_score_lines.update({(game_id, player_id): None})
+                database_box_score_lines.update({(game_id, roster_id): None})
         
-        copy_file_name = FileUtils.get_copy_file_name('box_score_{stat_type}'
-                                                      .format(stat_type=stat_type))
-        with open(copy_file_name, 'wb') as copy_file:
-            writer = unicodecsv.DictWriter(copy_file, ['game_id', 'roster_id'] +
-                                           database_stat_headers[stat_type])
-            writer.writeheader()
-            writer.writerows(new_box_score_lines)
-        
+        header = ['game_id', 'roster_id'] + database_stat_headers[stat_type]
         Database.copy_expert('{stat_type}_line(game_id, roster_id, {stat_headings})'.format(
-                stat_type=stat_type, stat_headings=', '.join(database_stat_headers[stat_type])),
-                copy_file_name)
-        print('{num_lines} new lines.'.format(num_lines=len(new_box_score_lines)))
+            stat_type=stat_type, stat_headings=', '.join(database_stat_headers[stat_type])),
+            'box_score_{stat_type}'.format(stat_type=stat_type), header, new_box_score_lines)
+        
+        print('{num_lines} new lines. {bad_ids} with bad id.'.format(num_lines=len(
+            new_box_score_lines), bad_ids=players_with_bad_id))

@@ -4,6 +4,8 @@ work.
 
 @author: Kevin Kelly
 """
+import os
+
 from scrapers import BoxScores
 from scrapers import ConferenceStats
 from scrapers import GameInfo
@@ -22,20 +24,23 @@ def main():
     
     :return: None
     """
+    if not os.path.exists('../scraped-data/'):
+        os.makedirs('../scraped-data/')
+    
     # SchoolIds.get_school_ids()
     # Logos.get_all_logos()
-    years = range(2020, 2021)
+    years = range(2014, 2020)
     divisions = [1]
     for year in years:
         for division in divisions:
             print('Year: {}, Division: {}'.format(year, division))
-            # ConferenceStats.get_conference_stats(year, division)
+            ConferenceStats.get_conference_stats(year, division)
             
-            # TeamStats.get_team_stats(year, division)  # must run before team info, rosters,
+            TeamStats.get_team_stats(year, division)  # must run before team info, rosters,
             # and player stats
-            # TeamInfo.get_team_info(year, division)
-            # Rosters.get_rosters(year, division)
-            # PlayerStats.get_player_stats(year, division)
+            TeamInfo.get_team_info(year, division)
+            Rosters.get_rosters(year, division)
+            PlayerStats.get_player_stats(year, division)
             
             GameInfo.get_game_info(year, division)  # must run before box scores and play by play
             BoxScores.get_box_scores(year, division)

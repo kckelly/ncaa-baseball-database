@@ -1,5 +1,7 @@
 """
 This file copies the play by play to the database.
+
+@author: Kevin Kelly
 """
 import re
 
@@ -19,12 +21,12 @@ def copy_play_by_play(year, division):
     """
     print('Copying play by play... ', end='')
     
-    all_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
-
+    database_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
+    
     current_pbp_games = {(pbp['game_id']): None for pbp in Database.get_all_play_by_play()}
-
-    all_teams = {team['school_ncaa_id']: team['team_id'] for team in Database.get_all_team_info()
-                 if team['year'] == year}
+    
+    database_teams = {team['school_ncaa_id']: team['team_id'] for team in
+                      Database.get_all_team_info() if team['year'] == year}
     
     pbp_file_name = FileUtils.get_scrape_file_name(year, division, 'play_by_play')
     new_pbp = []
@@ -32,34 +34,41 @@ def copy_play_by_play(year, division):
         reader = unicodecsv.DictReader(pbp_file)
         order = 0
         for line in reader:
-            game_id = all_games[int(line['game_id'])]
+            
+            game_id = database_games[int(line['game_id'])]
             if game_id in current_pbp_games:
                 continue
+            
+            # if this conditional is true we have reached the end of the inning, so we start the
+            # count over
             if line['pbp_type'] == 'inning_summary' and line['side'] == 'home':
                 order = 0
                 continue
-            team_id = all_teams[int(line['school_id'])]
-            text = re.sub(r'\(.*\)', '', line['pbp_text'])
+            
+            team_id = database_teams[int(line['school_id'])]
+            
+            play = re.sub(r'\(.*\)', '', line['pbp_text'])
+            
             try:
                 pitches = re.search(r'\((.*)\)', line['pbp_text']).group(1)
                 if not re.match(r'[0-3]-[0-2] ?[SFBK]*', pitches):
-                    text += pitches
+                    play += pitches
                     pitches = None
             except AttributeError:
                 pitches = None
-            if text == '' or text is None:
+            
+            if play == '' or play is None:
                 continue
-            new_pbp.append({'game_id': game_id, 'team_id': team_id, 'inning': line['inning'],
-                            'ord': order, 'text': text, 'pitches': pitches})
+            
+            new_pbp.append({'game_id': game_id,
+                            'team_id': team_id,
+                            'inning': line['inning'],
+                            'ord': order,
+                            'text': play,
+                            'pitches': pitches})
             order += 1
-        
-    copy_file_name = FileUtils.get_copy_file_name('play_by_play')
-    with open(copy_file_name, 'wb') as copy_file:
-        writer = unicodecsv.DictWriter(copy_file, ['game_id', 'team_id', 'inning', 'ord', 'text',
-                                                   'pitches'])
-        writer.writeheader()
-        writer.writerows(new_pbp)
-        
+    
+    header = ['game_id', 'team_id', 'inning', 'ord', 'text', 'pitches']
     Database.copy_expert('play_by_play(game_id, team_id, inning, ord, text, pitches)',
-                         copy_file_name)
+                         'play_by_play', header, new_pbp)
     print('{num_lines} new play by play lines.'.format(num_lines=len(new_pbp)))

@@ -77,13 +77,12 @@ def get_team_stats(year, division):
                     try:
                         team_url = stat_row.select_one('a').attrs.get('href')
                         school_id = WebUtils.get_school_id_from_url(team_url)
+                        if stat_type == stat_types[2]:
+                            team_conference_info.append([school_id, team_stats[1], team_name])
                     except AttributeError:
                         school_id = None
                     team_stats.insert(1, school_id)
                     team_stats_writer.writerow(team_stats)
-                    
-                    if stat_type == stat_types[2]:
-                        team_conference_info.append([school_id, team_stats[2], team_name])
             
             print('{num_teams} teams found.'.format(num_teams=len(team_dict) - 1))
     

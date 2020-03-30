@@ -81,5 +81,5 @@ def get_conference_stats(year, division):
     conference_header = ['conference_name']
     with open(conferences_file_name, 'wb') as file:
         conferences_writer = unicodecsv.writer(file)
-        conferences_writer.writerow([conference_header])
+        conferences_writer.writerow(conference_header)
         conferences_writer.writerows(conference_info[:-1])

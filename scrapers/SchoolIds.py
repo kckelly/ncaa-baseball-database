@@ -22,13 +22,6 @@ def get_school_ids():
     school_ids = [[col.select('td')[1].text, col.select('td')[0].text]
                   for col in [row for row in page.select_one('table').select('tr')[2:]]]
     
-    # these are schools that are most likely NAIA and so do not have a school code, but played
-    # games against NCAA schools at some point
-    extra_schools = [['St. Catharine', '506354'], ['Mid-Continent', '506155'],
-                     ['St. Gregory\'s', '506137'], ['Concordia (OR)', '501142'],
-                     ['Selma', '504748'], ['LIU Post', '362'], ['AIB College', '506424']]
-    school_ids.extend(extra_schools)
-    
     file_name = '../scraped-data/school_ids.csv'
     header = ['school_name', 'school_id']
     with open(file_name, 'wb') as file:

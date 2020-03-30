@@ -50,9 +50,9 @@ def get_all_logos():
             else:
                 print('Logo not found: {school} {size}'.format(school=school, size=size))
                 logo_list.append([school, size, False])
-    
+
     # keeps track of whether schools have a logo or not
-    logo_csv_name = 'scraped-data/logos/logo_list.csv'
+    logo_csv_name = '../scraped-data/logos/logo_list.csv'
     header = ['school_name', 'size', 'logo']
     with open(logo_csv_name, 'wb') as logo_csv:
         writer = unicodecsv.writer(logo_csv)
