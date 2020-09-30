@@ -7,6 +7,7 @@ import unicodecsv
 
 import Database
 import FileUtils
+import WebUtils
 
 
 def copy_schools():
@@ -29,17 +30,6 @@ def copy_schools():
                 new_schools.append({'school_id': school['school_id'],
                                     'school_name': school['school_name']})
     
-    # these are schools that are most likely NAIA and so do not have a school code, but played
-    # games against NCAA schools at some point. They have to be added manually since the school id
-    # web page does not include these schools.
-    extra_schools = [['St. Catharine', 506354], ['Mid-Continent', 506155],
-                     ['St. Gregory\'s', 506137], ['Concordia (OR)', 501142],
-                     ['Selma', 504748], ['LIU Post', 362], ['AIB College', 506424]]
-    for school in extra_schools:
-        if school[1] not in database_schools:
-            new_schools.append({'school_id': school[1],
-                                'school_name': school[0]})
-    
     header = ['school_id', 'school_name']
     Database.copy_expert('school(ncaa_id, name)', 'schools', header, new_schools)
     
@@ -48,7 +38,8 @@ def copy_schools():
 
 def add_nicknames_and_urls(year, division):
     """
-    Add nickname and urls for schools from this year and division.
+    Add nickname and urls for schools from this year and division. Adds any schools not already
+    in the database.
     :param year: the year for these schools' nicknames and urls
     :param division: the division these schools competed at
     :return: None
@@ -57,22 +48,41 @@ def add_nicknames_and_urls(year, division):
     
     database_schools = {school['ncaa_id']: {'nickname': school['nickname'], 'url': school['url']}
                         for school in Database.get_all_schools()}
-    
+    database_schools_by_name = {school['name']: {'ncaa_id': school['ncaa_id'],
+                                                 'nickname': school['nickname'],
+                                                 'url': school['url']}
+                                for school in Database.get_all_schools()}
     school_updates = []
+    
+    new_schools = []
     
     school_file_name = FileUtils.get_scrape_file_name(year, division, 'team_info')
     with open(school_file_name, 'rb') as school_file:
         school_reader = unicodecsv.DictReader(school_file)
         for school in school_reader:
             database_school = database_schools.get(int(school['school_id']))
-            if database_school is not None and database_school['nickname'] == school['nickname'] \
-                    and database_school['url'] == school['website']:
-                continue
-            school_updates.append({'school_ncaa_id': school['school_id'],
-                                   'school_nickname': school['nickname'],
-                                   'school_url': school['website']})
+            if database_school is None:
+                database_school = database_schools_by_name.get(school['school_name'])
+                
+                if database_school is None:
+                    new_schools.append({'ncaa_id': school['school_id'],
+                                        'name': school['school_name'],
+                                        'nickname': school['nickname'],
+                                        'url': school['website']})
+                else:
+                    school['school_id'] = database_school['ncaa_id']
+            if database_school is not None and (database_school['nickname'] != school['nickname'] \
+                                                or database_school['url'] != school['website']):
+                school_updates.append({'school_ncaa_id': school['school_id'],
+                                       'school_nickname': school['nickname'],
+                                       'school_url': school['website']})
     connection = Database.connect()
     cursor = connection.cursor()
+    for new_school in new_schools:
+        cursor.execute('INSERT INTO school(ncaa_id, name, nickname, url) '
+                       'VALUES(%s, %s, %s, %s);', (new_school['ncaa_id'], new_school['name'],
+                                                   new_school['nickname'], new_school['url']))
+    
     for update in school_updates:
         cursor.execute('UPDATE school '
                        'SET nickname = %s , url = %s '
@@ -83,3 +93,45 @@ def add_nicknames_and_urls(year, division):
     connection.close()
     
     print('{updates} schools updated.'.format(updates=len(school_updates)))
+
+
+def add_other_school(name, school_ncaa_id):
+    """
+        Add the school with this ncaa_id to the database. Should only be used
+        when a school is not already in the database, which should only be for non-NCAA schools.
+        :param name: the name of the school
+        :param school_ncaa_id: the ncaa_id of the school
+        :return: the ncaa_id of the newly added school
+        """
+    connection = Database.connect()
+    cursor = connection.cursor()
+    
+    cursor.execute('INSERT INTO school(ncaa_id, name) '
+                   'VALUES(%s, %s) '
+                   'RETURNING id', (school_ncaa_id, name))
+    school_id = cursor.fetchone()[0]
+    connection.commit()
+    connection.close()
+    
+    return school_id
+
+
+def find_and_add_other_school(name, team_sport_id):
+    """
+    Scrape and add the school with this team_sport_id to the database. Should only be used when a
+    school is not already in the database, which should only be for non-NCAA schools.
+    :param name: the name of the school
+    :param team_sport_id: the team_sport_id of the school, acquired from the team link in a box
+    score
+    :return: the ncaa_id of the newly added school
+    """
+    url = 'https://stats.ncaa.org/teams/{}'.format(team_sport_id)
+    print(url)
+    page = WebUtils.get_page(url, 0.1, 10)
+    
+    for link in page.select('a'):
+        if link.text == 'Team History':
+            school_ncaa_id = link.attrs['href'].split('/')[-1]
+            break
+    
+    return add_other_school(name, school_ncaa_id)

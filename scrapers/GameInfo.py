@@ -74,21 +74,23 @@ def get_game_info(year, division):
                       .format(date=game['date'], school_name=game['school_name'],
                               opponent_name=game['opponent_string']))
                 continue
-            
+
             game_ids.add(game_url)
-            
+
             print('{num_games}: Getting game info and innings for {game_id}... '.format(
                 num_games=len(game_ids),
                 game_id=WebUtils.get_contest_id_from_url(game['game_url'], year)), end='')
-            
+
             page = WebUtils.get_page(game_url, 0.1, 10)
-            
+            if page.text == 'Box score not available':
+                print('{url}: box score missing'.format(url=game['game_url']))
+                continue
             game_id = page.select_one('#primary_nav_wrap').select_one('a').attrs.get('href')[16:]
-            
+
             print('{date} {school_name} {opponent_name}'
                   .format(date=game['date'], school_name=game['school_name'],
                           opponent_name=game['opponent_string']))
-            
+
             # innings
             innings = page.select_one('.mytable')
             away_innings = innings.select('tr')[1]
@@ -102,7 +104,8 @@ def get_game_info(year, division):
             # This dict is for some of the errors in the game info pages, for some reason these
             # do not always match the school name the ncaa has
             name_changes = {'Incarnate Word': 'UIW', 'LIU Brooklyn': 'LIU',
-                            'Coastal Caro.': 'Coastal Carolina', 'Loyola Marymount': 'LMU (CA)'}
+                            'Coastal Caro.': 'Coastal Carolina', 'Loyola Marymount': 'LMU (CA)',
+                            'NYIT': 'New York Tech'}
             if away_school in name_changes:
                 away_school = name_changes[away_school]
             

@@ -20,6 +20,7 @@ def copy_play_by_play(year, division):
     :return: None
     """
     print('Copying play by play... ', end='')
+    database_schools = {school['name']: school['ncaa_id'] for school in Database.get_all_schools()}
     
     database_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
     
@@ -33,22 +34,31 @@ def copy_play_by_play(year, division):
     with open(pbp_file_name, 'rb') as pbp_file:
         reader = unicodecsv.DictReader(pbp_file)
         order = 0
+        away = True
         for line in reader:
-            
             game_id = database_games[int(line['game_id'])]
             if game_id in current_pbp_games:
                 continue
-            
+    
+            if line['pbp_type'] == 'inning_summary':
+                order = 0
+                away = True
+                continue
+    
             # if this conditional is true we have reached the end of the inning, so we start the
             # count over
-            if line['pbp_type'] == 'inning_summary' and line['side'] == 'home':
+            if away and line['side'] == 'home':
                 order = 0
-                continue
-            
-            team_id = database_teams[int(line['school_id'])]
-            
+                away = False
+    
+            try:
+                team_id = database_teams[int(line['school_id'])]
+            except ValueError:
+                school_id = database_schools[line['school_name']]
+                team_id = database_teams[school_id]
+    
             play = re.sub(r'\(.*\)', '', line['pbp_text'])
-            
+    
             try:
                 pitches = re.search(r'\((.*)\)', line['pbp_text']).group(1)
                 if not re.match(r'[0-3]-[0-2] ?[SFBK]*', pitches):
@@ -59,16 +69,17 @@ def copy_play_by_play(year, division):
             
             if play == '' or play is None:
                 continue
-            
+    
             new_pbp.append({'game_id': game_id,
                             'team_id': team_id,
                             'inning': line['inning'],
+                            'side': line['side'],
                             'ord': order,
                             'text': play,
                             'pitches': pitches})
             order += 1
-    
-    header = ['game_id', 'team_id', 'inning', 'ord', 'text', 'pitches']
-    Database.copy_expert('play_by_play(game_id, team_id, inning, ord, text, pitches)',
+
+    header = ['game_id', 'team_id', 'inning', 'side', 'ord', 'text', 'pitches']
+    Database.copy_expert('play_by_play(game_id, team_id, inning, side, ord, text, pitches)',
                          'play_by_play', header, new_pbp)
     print('{num_lines} new play by play lines.'.format(num_lines=len(new_pbp)))

@@ -17,11 +17,15 @@ def main():
     """
     DefaultValues.insert_default_conferences()
     Schools.copy_schools()
-    years = range(2012, 2013)
-    divisions = [1]
+    years = range(2012, 2020)
+    divisions = [1, 2, 3]
     
     for year in years:
         for division in divisions:
+            if year == 2012 and division != 1:
+                continue
+            if year == 2013 and division == 2:
+                continue
             print('Year: {}, Division: {}'.format(year, division))
             Conferences.copy_conferences(year, division)
             Schools.add_nicknames_and_urls(year, division)

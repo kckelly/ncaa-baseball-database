@@ -39,12 +39,16 @@ def get_conference_stats(year, division):
         stat_file_name = base_file_name.format(stat_type=stat_type)
         conference_stats_file_name = FileUtils.get_scrape_file_name(year, division, stat_file_name)
         with open(conference_stats_file_name, 'wb') as conference_stats_file:
+            if year == 2016 and division == 3 and stat_type == 'fielding':
+                print('2016 division 3 fielding totals are messed up on the ncaa site, check if '
+                      'they work again manually\n {}'.format(url))
+                continue
             conference_stats_writer = unicodecsv.writer(conference_stats_file)
-            
+    
             print('Getting conference {stat_type} stats for {year} division {division}... '
                   .format(stat_type=stat_type, year=year, division=division),
                   end='')
-            
+    
             url = base_url.format(division=division, year_id=year_id,
                                   year_stat_id=ids[stat_type + '_id'])
             page = WebUtils.get_page(url, 0.1, 10)
@@ -71,7 +75,7 @@ def get_conference_stats(year, division):
                     
                     # this check is performed so that the conference names only get added to the
                     # conferences file once
-                    if stat_type == stat_types[2]:
+                    if stat_type == stat_types[0]:
                         conference_info.append([conference_name])
             
             print('{num_conferences} conferences found.'.format(num_conferences=

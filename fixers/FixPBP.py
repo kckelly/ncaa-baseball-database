@@ -4,7 +4,7 @@ import DataUtils
 import FileUtils
 
 schools = DataUtils.get_school_id_dict()
-years = range(2012, 2020)
+years = range(2012, 2013)
 division = 1
 for year in years:
     lines = []

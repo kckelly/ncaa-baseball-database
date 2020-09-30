@@ -39,7 +39,7 @@ def copy_umpires(year, division):
                 
                 try:
                     ump_first_name = ump.split(' ', 1)[0]
-                    ump_last_name = ump.split(' ', 1)[1]
+                    ump_last_name = ump.split(' ', 1)[1].split('\\">')[0]
                 except IndexError:
                     continue
                 

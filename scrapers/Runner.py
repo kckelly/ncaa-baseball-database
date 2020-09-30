@@ -29,22 +29,26 @@ def main():
     
     # SchoolIds.get_school_ids()
     # Logos.get_all_logos()
-    years = range(2014, 2020)
-    divisions = [1]
+    years = range(2019, 2020)
+    divisions = [2]
     for year in years:
         for division in divisions:
+            if year == 2012 and division != 1:
+                continue
+            if year == 2013 and division == 2:
+                continue
             print('Year: {}, Division: {}'.format(year, division))
-            ConferenceStats.get_conference_stats(year, division)
+            # ConferenceStats.get_conference_stats(year, division)
             
             TeamStats.get_team_stats(year, division)  # must run before team info, rosters,
             # and player stats
             TeamInfo.get_team_info(year, division)
-            Rosters.get_rosters(year, division)
-            PlayerStats.get_player_stats(year, division)
+            # Rosters.get_rosters(year, division)
+            # PlayerStats.get_player_stats(year, division)
             
-            GameInfo.get_game_info(year, division)  # must run before box scores and play by play
-            BoxScores.get_box_scores(year, division)
-            PlayByPlay.get_play_by_play(year, division)
+            # GameInfo.get_game_info(year, division)  # must run before box scores and play by play
+            # BoxScores.get_box_scores(year, division)
+            # PlayByPlay.get_play_by_play(year, division)
 
 
 if __name__ == '__main__':

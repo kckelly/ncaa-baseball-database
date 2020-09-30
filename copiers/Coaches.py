@@ -32,6 +32,10 @@ def copy_coaches(year, division):
                 first_name = coach['coach_name'].split(' ')[0]
                 last_name = coach['coach_name'].split(' ')[1]
                 if (int(coach['coach_id']), first_name, last_name) not in database_coaches:
+                    try:
+                        coach['year_graduated'] = int(coach['year_graduated'])
+                    except ValueError:
+                        coach['year_graduated'] = None
                     new_coaches.append({'ncaa_id': coach['coach_id'],
                                         'first_name': first_name,
                                         'last_name': last_name,

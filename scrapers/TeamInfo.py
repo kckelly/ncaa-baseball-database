@@ -94,30 +94,34 @@ def get_team_info(year, division):
                     elif line.startswith('Primary Venue'):
                         break
             stadium_writer.writerow(stadium)
-            
+
             # coach information
-            coach_info = page.select_one('#head_coaches_div').select('fieldset')[-1]
             coach = {heading: None for heading in coach_header}
             coach['school_name'] = team['school_name']
             coach['school_id'] = team['school_id']
-            if coach_info != 'Head Coach':
-                for line in coach_info.text.strip().split('\n'):
-                    if line.startswith('Name'):
-                        coach['coach_name'] = line[6:]
-                        try:
-                            coach_url = coach_info.select_one('a').attrs.get('href')
-                            coach['coach_id'] = WebUtils.get_coach_id_from_url(coach_url)
-                        except AttributeError:
-                            coach['coach_id'] = None
-                    elif line.startswith('Alma mater'):
-                        if '-' in line:
-                            year_index = line.rindex('-')
-                            coach['alma_mater'] = line[12:year_index - 1]
-                            coach['year_graduated'] = line[year_index + 2:]
-                        else:
-                            coach['alma_mater'] = line[12:]
-            coach_writer.writerow(coach)
-            
+            try:
+                coach_info = page.select_one('#head_coaches_div').select('fieldset')[-1]
+                if coach_info != 'Head Coach':
+                    for line in coach_info.text.strip().split('\n'):
+                        if line.startswith('Name'):
+                            coach['coach_name'] = line[6:]
+                            try:
+                                coach_url = coach_info.select_one('a').attrs.get('href')
+                                coach['coach_id'] = WebUtils.get_coach_id_from_url(coach_url)
+                            except AttributeError:
+                                coach['coach_id'] = None
+                        elif line.startswith('Alma mater'):
+                            if '-' in line:
+                                year_index = line.rindex('-')
+                                coach['alma_mater'] = line[12:year_index - 1]
+                                coach['year_graduated'] = line[year_index + 2:]
+                            else:
+                                coach['alma_mater'] = line[12:]
+            except:
+                pass
+            finally:
+                coach_writer.writerow(coach)
+
             # team schedule
             schedule_table = page.select('table')[1]
             schedule_rows = schedule_table.select('tr')[2:]
@@ -129,6 +133,9 @@ def get_team_info(year, division):
                 starting_index = 0
                 step_amount = 1
             for schedule_row in schedule_rows[starting_index::step_amount]:
+                if len(schedule_row.attrs) > 0 and \
+                        schedule_row.attrs.get('class')[0] == 'grey_heading':
+                    continue
                 game_counter += 1
                 game_details = schedule_row.select('td')
                 game = {heading: None for heading in schedule_header}

@@ -39,7 +39,7 @@ def copy_players(year, division):
             last_name = line['player_name'].split(',', 1)[0].strip()
             
             # some players have empty names, I chose to ignore them
-            if (first_name, last_name) == ('', ''):
+            if last_name == '':
                 continue
             
             # null values are not allowed for first names so if they have a last name I still add
@@ -69,17 +69,19 @@ def create_rosters(year, division):
     :return: None
     """
     print('Creating rosters... ', end='')
-    
+
     all_players_by_ncaa_id = {player['ncaa_id']: player['player_id'] for player in
                               Database.get_all_players()}
-    
+
     # all teams from this year
     year_teams_by_ncaa_id = {team['school_ncaa_id']: team['team_id'] for team in
                              Database.get_all_team_info() if team['year'] == year}
-    
+    year_teams_by_name = {team['school_name']: team['team_id'] for team in
+                          Database.get_all_team_info() if team['year'] == year}
+
     database_roster_rows = {(roster['team_id'], roster['player_id']): roster['ncaa_id'] for roster
                             in Database.get_all_roster_info()}
-    
+
     player_class_map = {'fr': 'freshman', 'so': 'sophomore', 'jr': 'junior', 'sr': 'senior',
                         'n/a': 'n/a'}
     new_roster_rows = []
@@ -92,14 +94,17 @@ def create_rosters(year, division):
                 player_id = all_players_by_ncaa_id[player_ncaa_id]
             except (KeyError, ValueError):
                 continue
-            team_id = year_teams_by_ncaa_id[int(line['school_id'])]
-            
+            try:
+                team_id = year_teams_by_ncaa_id[int(line['school_id'])]
+            except KeyError:
+                team_id = year_teams_by_name[line['school_name']]
+    
             # skip if the player is already in the database
             if (team_id, player_id) in database_roster_rows:
                 continue
-            
+    
             database_roster_rows.update({(team_id, player_id): player_ncaa_id})
-            
+    
             player_class = player_class_map[line['class'].lower()]
             new_roster_rows.append({'team_id': team_id,
                                     'player_id': player_id,

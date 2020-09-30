@@ -257,7 +257,7 @@ def get_all_innings():
 def get_all_game_position_info():
     """
     Get all game position relations from the game_position table.
-    :return: a list of gamae position dicts
+    :return: a list of game position dicts
     """
     connection = connect()
     cursor = connection.cursor()
@@ -331,12 +331,12 @@ def get_all_play_by_play():
     """
     connection = connect()
     cursor = connection.cursor()
-    cursor.execute('SELECT game_id, team_id, inning, ord, text, pitches '
+    cursor.execute('SELECT game_id, team_id, inning, side, ord, text, pitches '
                    'FROM play_by_play;')
     pbp = []
     for row in cursor:
-        pbp.append({'game_id': row[0], 'team_id': row[1], 'inning': row[2], 'ord': row[3],
-                    'text': row[4], 'pitches': row[5]})
+        pbp.append({'game_id': row[0], 'team_id': row[1], 'inning': row[2], 'side': row[3],
+                    'ord': row[4], 'text': row[5], 'pitches': row[6]})
     connection.close()
     return pbp
 
@@ -463,6 +463,73 @@ def get_roster_id(year, division, first_name, last_name, school_name):
                    '  AND c.division = %s '
                    '  AND s.name = %s;', (first_name, last_name, year, division, school_name))
     player_ids = cursor.fetchmany(2)
+    connection.close()
     if len(player_ids) != 1:
         return None
     return player_ids[0][0]
+
+
+def get_year_division_game_ids(year, division):
+    """
+    Get all game ids from this year and division.
+    :param year: the year of the games
+    :param division: the division of the games
+    :return: a list of game ids
+    """
+    connection = connect()
+    cursor = connection.cursor()
+    cursor.execute('SELECT game.id '
+                   'FROM game '
+                   '  JOIN team AS at ON at.id = game.away_team_id '
+                   '  JOIN team AS ht ON ht.id = game.home_team_id '
+                   '  JOIN conference AS ac ON ac.id = at.conference_id '
+                   '  JOIN conference AS hc ON hc.id = ht.conference_id '
+                   'WHERE at.year = %s '
+                   '  AND (ac.division = %s '
+                   '  OR hc.division = %s)'
+                   'ORDER BY game.id', [year, division, division])
+    return [row[0] for row in cursor]
+
+
+def get_game_lineup(game_id, side):
+    """
+    Get the lineup for the specified side team for this game.
+    :param game_id: the game id of the game
+    :param side: the side(away or home) of the lineup
+    :return: a list of player dicts: {(first_name, last_name): roster_id}
+    """
+    connection = connect()
+    cursor = connection.cursor()
+    cursor.execute('SELECT game_id, roster_id, first_name, last_name '
+                   'FROM hitting_line '
+                   '  JOIN game ON game.id = hitting_line.game_id '
+                   '  JOIN roster ON roster.id = hitting_line.roster_id '
+                   '  JOIN player ON player.id = roster.player_id '
+                   'WHERE game_id = %s '
+                   '  AND roster.team_id = game.{}_team_id'.format(side), [game_id])
+    lineup = []
+    for row in cursor:
+        lineup.append({(row[2], row[3]): row[1]})
+    
+    connection.close()
+    
+    return lineup
+
+
+def get_game_pbp(game_id):
+    """
+    Get the play by play for the specified game.
+    :param game_id: the game id of the game
+    :return: a list of play by play dicts, in order by inning, side, then ord
+    """
+    connection = connect()
+    cursor = connection.cursor()
+    cursor.execute('SELECT team_id, inning, side, ord, text, pitches '
+                   'FROM play_by_play AS pbp '
+                   'WHERE game_id = %s '
+                   'ORDER BY inning, side, ord', [game_id])
+    pbp = []
+    for row in cursor:
+        pbp.append({'team_id': row[0], 'inning': row[1], 'side': row[2],
+                    'ord': row[3], 'text': row[4], 'pitches': row[5]})
+    return pbp

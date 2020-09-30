@@ -20,7 +20,8 @@ def copy_conferences(year, division):
     print('Copying conferences... ', end='')
     
     database_conferences = set(
-        [conference['name'] for conference in Database.get_all_conferences()])
+        [conference['name'] for conference in
+         Database.get_all_conferences() if conference['division'] == division])
     
     # get new conferences from this year and division
     new_conferences = []
@@ -28,6 +29,10 @@ def copy_conferences(year, division):
     with open(conference_file_name, 'rb') as conference_file:
         conference_reader = unicodecsv.DictReader(conference_file)
         for conference in conference_reader:
+            if 'Independent' in conference['conference_name']:
+                continue
+            if division == 3 and conference['conference_name'] == 'MWC':
+                conference['conference_name'] = 'Midwest Conference'
             if conference['conference_name'] not in database_conferences:
                 new_conferences.append({'conference_name': conference['conference_name'],
                                         'division': division})

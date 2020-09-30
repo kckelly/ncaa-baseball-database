@@ -3,7 +3,7 @@ CREATE TABLE pitching_line
   game_id int NOT NULL REFERENCES game,
   roster_id int NOT NULL REFERENCES roster,
   app int CHECK (app = 0 OR app = 1),
-  gs int CHECK (gs = 0 OR app = 1),
+  gs int CHECK (gs = 0 OR gs = 1),
   ord int,
   w int CHECK (w = 0 OR w = 1),
   l int CHECK (l = 0 OR l = 1),

@@ -20,10 +20,12 @@ def create_teams(year, division):
     :return: None
     """
     print('Creating teams... ', end='')
-    
+
     database_teams = {team['school_ncaa_id'] for team
                       in Database.get_all_team_info() if team['year'] == year}
-    
+    database_teams_by_name = {team['school_name'] for team
+                              in Database.get_all_team_info() if team['year'] == year}
+
     # These dict comprehensions make a mapping of either the name or ncaa_id of each item to the
     # id of that item stored in the database. For instance, database_conferences contains a
     # mapping of conference names to ids from the conference table, so to get the conference id for
@@ -32,17 +34,22 @@ def create_teams(year, division):
                             in Database.get_all_conferences() if conference['division'] == division}
     database_schools = {school['ncaa_id']: school['id'] for school
                         in Database.get_all_schools()}
+    database_schools_by_name = {school['name']: school['id'] for school
+                                in Database.get_all_schools()}
     database_coaches = {coach['ncaa_id']: coach['id'] for coach
                         in Database.get_all_coaches()}
     database_stadiums = {stadium['name']: stadium['id'] for stadium
                          in Database.get_all_stadiums()}
-    
+
     team_coaches = {}
     coach_file_name = FileUtils.get_scrape_file_name(year, division, 'coaches')
     with open(coach_file_name, 'rb') as coach_file:
         coach_reader = unicodecsv.DictReader(coach_file)
         for coach in coach_reader:
-            team_coaches.update({int(coach['school_id']): int(coach['coach_id'])})
+            if coach['coach_id'] == '':
+                team_coaches.update({int(coach['school_id']): None})
+            else:
+                team_coaches.update({int(coach['school_id']): int(coach['coach_id'])})
     
     team_stadiums = {}
     stadiums_file_name = FileUtils.get_scrape_file_name(year, division, 'stadiums')
@@ -57,11 +64,20 @@ def create_teams(year, division):
         team_reader = unicodecsv.DictReader(team_file)
         for team in team_reader:
             school_ncaa_id = int(team['school_id'])
-            if school_ncaa_id not in database_teams:
+            if school_ncaa_id not in database_teams and \
+                    team['school_name'] not in database_teams_by_name:
+                if 'Independent' in team['conference_name']:
+                    team['conference_name'] = 'Independent'
+                if team['conference_name'] == 'MWC' and division == 3:
+                    team['conference_name'] = 'Midwest Conference'
                 conference_id = database_conferences[team['conference_name']]
-                school_id = database_schools[school_ncaa_id]
         
-                if team_coaches[school_ncaa_id] != '':
+                try:
+                    school_id = database_schools[school_ncaa_id]
+                except KeyError:
+                    school_id = database_schools_by_name[team['school_name']]
+        
+                if team_coaches[school_ncaa_id] is not None:
                     coach_ncaa_id = team_coaches[school_ncaa_id]
                     coach_id = database_coaches[coach_ncaa_id]
                 else:

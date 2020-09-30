@@ -20,6 +20,12 @@ table-definitions\pitching_line.sql + ^
 table-definitions\fielding_line.sql + ^
 table-definitions\umpire.sql + ^
 table-definitions\game_umpire.sql + ^
+function-definitions\player_year_totals_fielding.sql + ^
+function-definitions\player_year_totals_hitting.sql + ^
+function-definitions\player_year_totals_pitching.sql + ^
+function-definitions\team_year_totals_fielding.sql + ^
+function-definitions\team_year_totals_hitting.sql + ^
+function-definitions\team_year_totals_pitching.sql + ^
 copy.sql ^
 add_tables.sql
 psql -f add_tables.sql ncaa_baseball

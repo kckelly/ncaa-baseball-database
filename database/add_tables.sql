@@ -83,11 +83,15 @@ CREATE TABLE inning
   runs int NOT NULL CHECK (runs >= 0),
   UNIQUE (game_id, team_id, inning)
 );
+CREATE TYPE side AS ENUM ('away', 'home');
+
+
 CREATE TABLE play_by_play
 (
   game_id int NOT NULL REFERENCES game,
   team_id int NOT NULL REFERENCES team,
   inning int NOT NULL CHECK (inning > 0),
+  side side NOT NULL,
   ord int NOT NULL,
   text text NOT NULL,
   pitches varchar,
@@ -129,7 +133,7 @@ CREATE TABLE pitching_line
   game_id int NOT NULL REFERENCES game,
   roster_id int NOT NULL REFERENCES roster,
   app int CHECK (app = 0 OR app = 1),
-  gs int CHECK (gs = 0 OR app = 1),
+  gs int CHECK (gs = 0 OR gs = 1),
   ord int,
   w int CHECK (w = 0 OR w = 1),
   l int CHECK (l = 0 OR l = 1),
@@ -191,4 +195,70 @@ CREATE TABLE game_umpire
   --UNIQUE (game_id, umpire_id),
   UNIQUE (game_id, position)
 );
-\copy year_info (year, year_id, hitting_id, pitching_id, fielding_id) from 'csv-data/year_info.csv' delimiter ',' NULL AS '' CSV HEADER ;
+CREATE OR REPLACE FUNCTION player_year_totals_fielding(year integer, division integer)
+RETURNS TABLE(roster_id integer, po bigint, a bigint, e bigint, pb bigint, ci bigint, sb bigint, cs bigint, dp bigint, tp bigint) AS $$
+	BEGIN
+		RETURN QUERY SELECT r.id, sum(fl.po), sum(fl.a), sum(fl.e), sum(fl.pb), sum(fl.ci), sum(fl.sb), sum(fl.cs), sum(fl.dp), sum(fl.tp)
+					   FROM fielding_line as fl
+					     JOIN roster AS r ON r.id = fl.roster_id
+						 JOIN team AS t ON t.id = r.team_id
+						 JOIN conference AS c ON c.id = t.conference_id
+					   WHERE t.year = $1 AND c.division = $2
+					   GROUP BY r.id;
+	END;
+$$ LANGUAGE plpgsql;CREATE OR REPLACE FUNCTION player_year_totals_hitting(year integer, division integer)
+RETURNS TABLE(roster_id integer, ab bigint, h bigint, dbl bigint, tpl bigint, hr bigint, bb bigint, ibb bigint, hbp bigint, r bigint, rbi bigint, k bigint, sf bigint, sh bigint, dp bigint, sb bigint, cs bigint) AS $$
+	BEGIN
+		RETURN QUERY SELECT r.id, sum(hl.ab), sum(hl.h), sum(hl.dbl), sum(hl.tpl), sum(hl.hr), sum(hl.bb), sum(hl.ibb), sum(hl.hbp), sum(hl.r), sum(hl.rbi), sum(hl.k), sum(hl.sf), sum(hl.sh), sum(hl.dp), sum(hl.sb), sum(hl.cs)
+					   FROM hitting_line as hl
+					     JOIN roster AS r ON r.id = hl.roster_id
+						 JOIN team AS t ON t.id = r.team_id
+						 JOIN conference AS c ON c.id = t.conference_id
+					   WHERE t.year = $1 AND c.division = $2
+					   GROUP BY r.id;
+	END;
+$$ LANGUAGE plpgsql;CREATE OR REPLACE FUNCTION player_year_totals_pitching(year integer, division integer)
+RETURNS TABLE(roster_id integer, app bigint, gs bigint, ord bigint, w bigint, l bigint, sv bigint, ip float, p bigint, bf bigint, h bigint, dbl bigint, tpl bigint, hr bigint, bb bigint, ibb bigint, hbp bigint, r bigint, er bigint, ir bigint, irs bigint, fo bigint, go bigint, k bigint, kl bigint, sf bigint, sh bigint, bk bigint, wp bigint, cg bigint, sho bigint) AS $$
+	BEGIN
+		RETURN QUERY SELECT r.id, sum(pl.app), sum(pl.gs), sum(pl.ord), sum(pl.w), sum(pl.l), sum(pl.sv), sum(pl.ip), sum(pl.p), sum(pl.bf), sum(pl.h), sum(pl.dbl), sum(pl.tpl), sum(pl.hr), sum(pl.bb), sum(pl.ibb), sum(pl.hbp), sum(pl.r), sum(pl.er), sum(pl.ir), sum(pl.irs), sum(pl.fo), sum(pl.go), sum(pl.k), sum(pl.kl), sum(pl.sf), sum(pl.sh), sum(pl.bk), sum(pl.wp), sum(pl.cg), sum(pl.sho)
+					   FROM pitching_line as pl
+					     JOIN roster AS r ON r.id = pl.roster_id
+						 JOIN team AS t ON t.id = r.team_id
+						 JOIN conference AS c ON c.id = t.conference_id
+					   WHERE t.year = $1 AND c.division = $2
+					   GROUP BY r.id;
+	END;
+$$ LANGUAGE plpgsql;CREATE OR REPLACE FUNCTION team_year_totals_fielding(year integer, division integer)
+RETURNS TABLE(team_id integer, po bigint, a bigint, e bigint, pb bigint, ci bigint, sb bigint, cs bigint, dp bigint, tp bigint) AS $$
+	BEGIN
+		RETURN QUERY SELECT t.id, sum(fl.po), sum(fl.a), sum(fl.e), sum(fl.pb), sum(fl.ci), sum(fl.sb), sum(fl.cs), sum(fl.dp), sum(fl.tp)
+					   FROM fielding_line as fl
+					     JOIN roster AS r ON r.id = fl.roster_id
+						 JOIN team AS t ON t.id = r.team_id
+						 JOIN conference AS c ON c.id = t.conference_id
+					   WHERE t.year = $1 AND c.division = $2
+					   GROUP BY t.id;
+	END;
+$$ LANGUAGE plpgsql;CREATE OR REPLACE FUNCTION team_year_totals_hitting(year integer, division integer)
+RETURNS TABLE(team_id integer, ab bigint, h bigint, dbl bigint, tpl bigint, hr bigint, bb bigint, ibb bigint, hbp bigint, r bigint, rbi bigint, k bigint, sf bigint, sh bigint, dp bigint, sb bigint, cs bigint) AS $$
+	BEGIN
+		RETURN QUERY SELECT t.id, sum(hl.ab), sum(hl.h), sum(hl.dbl), sum(hl.tpl), sum(hl.hr), sum(hl.bb), sum(hl.ibb), sum(hl.hbp), sum(hl.r), sum(hl.rbi), sum(hl.k), sum(hl.sf), sum(hl.sh), sum(hl.dp), sum(hl.sb), sum(hl.cs)
+					   FROM hitting_line as hl
+					     JOIN roster AS r ON r.id = hl.roster_id
+						 JOIN team AS t ON t.id = r.team_id
+						 JOIN conference AS c ON c.id = t.conference_id
+					   WHERE t.year = $1 AND c.division = $2
+					   GROUP BY t.id;
+	END;
+$$ LANGUAGE plpgsql;CREATE OR REPLACE FUNCTION team_year_totals_pitching(year integer, division integer)
+RETURNS TABLE(team_id integer, app bigint, gs bigint, ord bigint, w bigint, l bigint, sv bigint, ip float, p bigint, bf bigint, h bigint, dbl bigint, tpl bigint, hr bigint, bb bigint, ibb bigint, hbp bigint, r bigint, er bigint, ir bigint, irs bigint, fo bigint, go bigint, k bigint, kl bigint, sf bigint, sh bigint, bk bigint, wp bigint, cg bigint, sho bigint) AS $$
+	BEGIN
+		RETURN QUERY SELECT t.id, sum(pl.app), sum(pl.gs), sum(pl.ord), sum(pl.w), sum(pl.l), sum(pl.sv), sum(pl.ip), sum(pl.p), sum(pl.bf), sum(pl.h), sum(pl.dbl), sum(pl.tpl), sum(pl.hr), sum(pl.bb), sum(pl.ibb), sum(pl.hbp), sum(pl.r), sum(pl.er), sum(pl.ir), sum(pl.irs), sum(pl.fo), sum(pl.go), sum(pl.k), sum(pl.kl), sum(pl.sf), sum(pl.sh), sum(pl.bk), sum(pl.wp), sum(pl.cg), sum(pl.sho)
+					   FROM pitching_line as pl
+					   	 JOIN roster AS r ON r.id = pl.roster_id
+						 JOIN team AS t ON t.id = r.team_id
+						 JOIN conference AS c ON c.id = t.conference_id
+					   WHERE t.year = $1 AND c.division = $2
+					   GROUP BY t.id;
+	END;
+$$ LANGUAGE plpgsql;\copy year_info (year, year_id, hitting_id, pitching_id, fielding_id) from 'csv-data/year_info.csv' delimiter ',' NULL AS '' CSV HEADER ;
