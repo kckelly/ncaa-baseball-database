@@ -31,6 +31,8 @@ def copy_conferences(year, division):
         for conference in conference_reader:
             if 'Independent' in conference['conference_name']:
                 continue
+            if division == 1 and conference['conference_name'] == 'Mountain West':
+                conference['conference_name'] = 'MWC'
             if division == 3 and conference['conference_name'] == 'MWC':
                 conference['conference_name'] = 'Midwest Conference'
             if conference['conference_name'] not in database_conferences:

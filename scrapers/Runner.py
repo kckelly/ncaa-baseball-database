@@ -29,8 +29,8 @@ def main():
     
     # SchoolIds.get_school_ids()
     # Logos.get_all_logos()
-    years = range(2019, 2020)
-    divisions = [2]
+    years = range(2012, 2020)
+    divisions = [1, 2, 3]
     for year in years:
         for division in divisions:
             if year == 2012 and division != 1:
@@ -40,9 +40,9 @@ def main():
             print('Year: {}, Division: {}'.format(year, division))
             # ConferenceStats.get_conference_stats(year, division)
             
-            TeamStats.get_team_stats(year, division)  # must run before team info, rosters,
+            # TeamStats.get_team_stats(year, division)  # must run before team info, rosters,
             # and player stats
-            TeamInfo.get_team_info(year, division)
+            # TeamInfo.get_team_info(year, division)
             # Rosters.get_rosters(year, division)
             # PlayerStats.get_player_stats(year, division)
             

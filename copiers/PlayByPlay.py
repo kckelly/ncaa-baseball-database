@@ -54,6 +54,15 @@ def copy_play_by_play(year, division):
             try:
                 team_id = database_teams[int(line['school_id'])]
             except ValueError:
+                name_changes = {'NYIT': 'New York Tech',
+                                'Wheeling Jesuit': 'Wheeling',
+                                'Cal St. LA': 'Cal State LA',
+                                'California (PA)': 'Cal U (PA)',
+                                'Robert Morris-Peoria': 'Roosevelt-Peoria'}
+                if line['school_name'] in name_changes:
+                    line['school_name'] = name_changes[line['school_name']]
+                elif line['school_name'] in name_changes:
+                    line['school_name'] = name_changes[line['school_name']]
                 school_id = database_schools[line['school_name']]
                 team_id = database_teams[school_id]
     

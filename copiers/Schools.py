@@ -101,7 +101,7 @@ def add_other_school(name, school_ncaa_id):
         when a school is not already in the database, which should only be for non-NCAA schools.
         :param name: the name of the school
         :param school_ncaa_id: the ncaa_id of the school
-        :return: the ncaa_id of the newly added school
+        :return: the school id of the newly added school
         """
     connection = Database.connect()
     cursor = connection.cursor()
@@ -123,7 +123,7 @@ def find_and_add_other_school(name, team_sport_id):
     :param name: the name of the school
     :param team_sport_id: the team_sport_id of the school, acquired from the team link in a box
     score
-    :return: the ncaa_id of the newly added school
+    :return: the ncaa_id of the newly added school and the school id of the school
     """
     url = 'https://stats.ncaa.org/teams/{}'.format(team_sport_id)
     print(url)
@@ -133,5 +133,4 @@ def find_and_add_other_school(name, team_sport_id):
         if link.text == 'Team History':
             school_ncaa_id = link.attrs['href'].split('/')[-1]
             break
-    
-    return add_other_school(name, school_ncaa_id)
+    return school_ncaa_id, add_other_school(name, school_ncaa_id)

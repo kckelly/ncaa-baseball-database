@@ -129,13 +129,23 @@ def get_game_info(year, division):
             
             try:
                 away_school_url = away_innings.select_one('a').attrs.get('href')
-                away_team_sport_id = WebUtils.get_school_id_from_url(away_school_url)
+                if 'teams' in away_school_url:
+                    away_team_sport_id = away_school_url.split('/')[2]
+                else:
+                    if away_school_id is None:
+                        away_school_id = away_school_url.split('/')[2]
+                    away_team_sport_id = None
             except AttributeError:
                 away_team_sport_id = None
             
             try:
                 home_school_url = home_innings.select_one('a').attrs.get('href')
-                home_team_sport_id = WebUtils.get_school_id_from_url(home_school_url)
+                if 'teams' in home_school_url:
+                    home_team_sport_id = home_school_url.split('/')[2]
+                else:
+                    if home_school_id is None:
+                        home_school_id = home_school_url.split('/')[2]
+                    home_team_sport_id = None
             except AttributeError:
                 home_team_sport_id = None
             

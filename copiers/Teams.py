@@ -68,15 +68,17 @@ def create_teams(year, division):
                     team['school_name'] not in database_teams_by_name:
                 if 'Independent' in team['conference_name']:
                     team['conference_name'] = 'Independent'
+                if team['conference_name'] == 'Mountain West' and division == 1:
+                    team['conference_name'] = 'MWC'
                 if team['conference_name'] == 'MWC' and division == 3:
                     team['conference_name'] = 'Midwest Conference'
                 conference_id = database_conferences[team['conference_name']]
-        
+
                 try:
                     school_id = database_schools[school_ncaa_id]
                 except KeyError:
                     school_id = database_schools_by_name[team['school_name']]
-        
+
                 if team_coaches[school_ncaa_id] is not None:
                     coach_ncaa_id = team_coaches[school_ncaa_id]
                     coach_id = database_coaches[coach_ncaa_id]

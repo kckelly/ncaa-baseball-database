@@ -19,7 +19,6 @@ def main():
     Schools.copy_schools()
     years = range(2012, 2020)
     divisions = [1, 2, 3]
-    
     for year in years:
         for division in divisions:
             if year == 2012 and division != 1:

@@ -98,19 +98,66 @@ def create_rosters(year, division):
                 team_id = year_teams_by_ncaa_id[int(line['school_id'])]
             except KeyError:
                 team_id = year_teams_by_name[line['school_name']]
-    
+
             # skip if the player is already in the database
             if (team_id, player_id) in database_roster_rows:
                 continue
-    
+
             database_roster_rows.update({(team_id, player_id): player_ncaa_id})
-    
+
             player_class = player_class_map[line['class'].lower()]
             new_roster_rows.append({'team_id': team_id,
                                     'player_id': player_id,
                                     'class': player_class})
-    
+
     header = ['team_id', 'player_id', 'class']
     Database.copy_expert('roster(team_id, player_id, class)', 'rosters', header, new_roster_rows)
-    
+
     print('{num_players} new roster rows.'.format(num_players=len(new_roster_rows)))
+
+
+def add_player_and_create_roster(first_name, last_name, player_ncaa_id, team_id):
+    """
+    Add a player to the player table and create the corresponding row in the roster table.
+    :param first_name: the first name of the player
+    :param last_name: the last name of the player
+    :param player_ncaa_id: the ncaa id of the player
+    :param team_id: the team id of the team in the database
+    :return: the player id and roster id of the added player
+    """
+    connection = Database.connect()
+    cursor = connection.cursor()
+    
+    if player_ncaa_id == '':
+        player_ncaa_id = None
+    
+    cursor.execute('INSERT INTO player(ncaa_id, first_name, last_name) '
+                   'VALUES(%s, %s, %s) '
+                   'RETURNING id', (player_ncaa_id, first_name, last_name))
+    player_id = cursor.fetchone()[0]
+    
+    connection.commit()
+    connection.close()
+    
+    roster_id = create_roster(player_id, team_id)
+    return player_id, roster_id
+
+
+def create_roster(player_id, team_id):
+    """
+    Create a row in the roster table for this player and team.
+    :param player_id: the id of the player
+    :param team_id: the id of the team
+    :return: the roster id of the new roster row
+    """
+    
+    connection = Database.connect()
+    cursor = connection.cursor()
+    cursor.execute('INSERT INTO roster(team_id, player_id, class)'
+                   'VALUES(%s, %s, %s) '
+                   'RETURNING id', (team_id, player_id, 'n/a'))
+    
+    roster_id = cursor.fetchone()[0]
+    connection.commit()
+    connection.close()
+    return roster_id

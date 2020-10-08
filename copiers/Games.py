@@ -10,6 +10,7 @@ import unicodecsv
 
 import Database
 import FileUtils
+from copiers import Rosters
 from copiers import Schools
 
 
@@ -34,6 +35,9 @@ def copy_game_info(year, division):
 
     new_games = []
 
+    new_schools = 0
+    new_teams = 0
+
     game_info_file_name = FileUtils.get_scrape_file_name(year, division, 'game_info')
     with open(game_info_file_name, 'rb') as game_info_file:
         game_info_reader = unicodecsv.DictReader(game_info_file)
@@ -52,45 +56,73 @@ def copy_game_info(year, division):
                 game['home_school_name'] = name_changes[game['home_school_name']]
             try:
                 away_team_id = database_teams[int(game['away_school_id'])]
-            except (KeyError, ValueError):
-                try:
-                    away_school_id = database_schools[game['away_school_name']]
+            except KeyError:
+                # if there is no team for this school yet, we check if the school is in the database. If it is not,
+                # then we need to create the school and team. If it is in the database, then we just create the team
+                # using the school id.
+                if game['away_school_name'] in database_schools:
+                    away_team_id = Database.create_team(year, game['away_school_id'])
+                    database_teams.update({int(game['away_school_id']): int(away_team_id)})
+                    new_teams += 1
+                else:
+                    away_school_id = Schools.add_other_school(game['away_school_name'], game['away_school_id'])
+                    database_schools.update({game['away_school_name']: int(game['away_school_id'])})
+                    away_team_id = Database.create_team(year, game['away_school_id'])
+                    database_teams.update({int(game['away_school_id']): int(away_team_id)})
+                    new_schools += 1
+                    new_teams += 1
+            except ValueError:
+                if game['away_school_name'] in database_schools:
+                    game['away_school_id'] = database_schools[game['away_school_name']]
                     try:
-                        away_team_id = database_teams[away_school_id]
+                        away_team_id = database_teams[int(game['away_school_id'])]
                     except KeyError:
-                        away_team_id = Database.create_team(year, away_school_id)
-                        database_teams.update({away_school_id: away_team_id})
-                except KeyError:
-                    if game['away_school_id'] == '':
-                        away_school_id = Schools.find_and_add_other_school(
-                            game['away_school_name'], game['away_team_sport_id'])
-                    else:
-                        away_school_id = Schools.add_other_school(game['away_school_name'],
-                                                                  game['away_school_id'])
-                    database_schools.update({game['away_school_name']: away_school_id})
-                    away_team_id = Database.create_team(year, away_school_id)
-                    database_teams.update({away_school_id: away_team_id})
+                        away_team_id = Database.create_team(year, game['away_school_id'])
+                        database_teams.update({int(game['away_school_id']): int(away_team_id)})
+                        new_teams += 1
+                else:
+                    game['away_school_id'], away_school_id = \
+                        Schools.find_and_add_other_school(game['away_school_name'], game['away_team_sport_id'])
+                    database_schools.update({game['away_school_name']: int(game['away_school_id'])})
+                    away_team_id = Database.create_team(year, game['away_school_id'])
+                    database_teams.update({int(game['away_school_id']): int(away_team_id)})
+                    new_schools += 1
+                    new_teams += 1
         
             try:
                 home_team_id = database_teams[int(game['home_school_id'])]
-            except (KeyError, ValueError):
-                try:
-                    home_school_id = database_schools[game['home_school_name']]
+            except KeyError:
+                # if there is no team for this school yet, we check if the school is in the database. If it is not,
+                # then we need to create the school and team. If it is in the database, then we just create the team
+                # using the school id.
+                if game['home_school_name'] in database_schools:
+                    home_team_id = Database.create_team(year, game['home_school_id'])
+                    database_teams.update({int(game['home_school_id']): int(home_team_id)})
+                    new_teams += 1
+                else:
+                    home_school_id = Schools.add_other_school(game['home_school_name'], game['home_school_id'])
+                    database_schools.update({game['home_school_name']: int(game['home_school_id'])})
+                    home_team_id = Database.create_team(year, game['home_school_id'])
+                    database_teams.update({int(game['home_school_id']): int(home_team_id)})
+                    new_schools += 1
+                    new_teams += 1
+            except ValueError:
+                if game['home_school_name'] in database_schools:
+                    game['home_school_id'] = database_schools[game['home_school_name']]
                     try:
-                        home_team_id = database_teams[home_school_id]
+                        home_team_id = database_teams[int(game['home_school_id'])]
                     except KeyError:
-                        home_team_id = Database.create_team(year, home_school_id)
-                        database_teams.update({home_school_id: home_team_id})
-                except KeyError:
-                    if game['home_school_id'] == '':
-                        home_school_id = Schools.find_and_add_other_school(
-                            game['home_school_name'], game['home_team_sport_id'])
-                    else:
-                        home_school_id = Schools.add_other_school(game['home_school_name'],
-                                                                  game['home_school_id'])
-                    database_schools.update({game['home_school_name']: home_school_id})
-                    home_team_id = Database.create_team(year, home_school_id)
-                    database_teams.update({home_school_id: home_team_id})
+                        home_team_id = Database.create_team(year, game['home_school_id'])
+                        database_teams.update({int(game['home_school_id']): int(home_team_id)})
+                        new_teams += 1
+                else:
+                    game['home_school_id'], home_school_id = \
+                        Schools.find_and_add_other_school(game['home_school_name'], game['home_team_sport_id'])
+                    database_schools.update({game['home_school_name']: int(game['home_school_id'])})
+                    home_team_id = Database.create_team(year, game['home_school_id'])
+                    database_teams.update({int(game['home_school_id']): int(home_team_id)})
+                    new_schools += 1
+                    new_teams += 1
             
             match = re.search(r'\d{2}/\d{2}/\d{4}', game['date'])
             date = datetime.strptime(match.group(), '%m/%d/%Y').date()
@@ -98,18 +130,19 @@ def copy_game_info(year, division):
             location = game['location']
             
             attendance = game['attendance'].replace(',', '')
-            
+        
             new_games.append({'ncaa_id': ncaa_id,
                               'away_team_id': away_team_id,
                               'home_team_id': home_team_id,
                               'date': date,
                               'location': location,
                               'attendance': attendance})
-    
+
     Database.copy_expert('game(ncaa_id, away_team_id, home_team_id, date, location, attendance)',
                          'game_info', header, new_games)
-    
-    print('{num_games} new games.'.format(num_games=len(new_games)))
+
+    print('{num_games} new games. {new_schools} schools added. {new_teams} teams created'.format(num_games=len(
+        new_games), new_schools=new_schools, new_teams=new_teams))
 
 
 def copy_game_innings(year, division):
@@ -139,13 +172,20 @@ def copy_game_innings(year, division):
             try:
                 team_id = database_teams[int(line[4])]
             except ValueError:
+                name_changes = {'NYIT': 'New York Tech',
+                                'Wheeling Jesuit': 'Wheeling',
+                                'Cal St. LA': 'Cal State LA',
+                                'California (PA)': 'Cal U (PA)',
+                                'Robert Morris-Peoria': 'Roosevelt-Peoria'}
+                if line[3] in name_changes:
+                    line[3] = name_changes[line[3]]
+                elif line[3] in name_changes:
+                    line[3] = name_changes[line[3]]
                 school_id = database_schools[line[3]]
                 team_id = database_teams[school_id]
-            except KeyError:
-                print()
             if (game_id, team_id) in database_innings:
                 continue
-    
+
             inning_num = 1
             for inning in line[5:]:
                 if inning == '':
@@ -171,14 +211,16 @@ def create_game_positions(year, division):
     :return: None
     """
     print("Creating game positions... ", end='')
-    
+
     positions = ['1b', '2b', '3b', 'ss', 'lf', 'cf', 'rf', 'dh', 'dp', 'ph', 'pr', 'p', 'c']
-    
+
     database_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
-    
+
+    all_players = {player['ncaa_id']: player['player_id'] for player in Database.get_all_players()}
+
     database_rosters = {roster['ncaa_id']: roster['roster_id'] for roster in
                         Database.get_all_roster_info() if roster['year'] == year}
-    
+
     all_players_by_name = {
         (roster['first_name'], roster['last_name'], roster['team_id']): roster['roster_id'] for
         roster in Database.get_all_roster_info() if roster['year'] == year}
@@ -193,8 +235,9 @@ def create_game_positions(year, division):
 
     new_positions = []
 
-    players_with_bad_id = set()
-    players_with_no_id = 0
+    no_names = 0
+    new_players = 0
+    new_rosters = 0
 
     unknown_schools = set()
 
@@ -207,21 +250,118 @@ def create_game_positions(year, division):
         
             try:
                 roster_id = database_rosters[int(line['player_id'])]
-            except (KeyError, ValueError):
-                try:
-                    roster_id = all_players_by_name.get((line['Player'].split(',', 1)[1].strip(),
-                                                         line['Player'].split(',', 1)[0].strip(),
-                                                         database_teams[line['school_id']]))
-                except IndexError:
-                    players_with_no_id += 1
+            except ValueError:
+                name_changes = {'NYIT': 'New York Tech',
+                                'Wheeling Jesuit': 'Wheeling',
+                                'Cal St. LA': 'Cal State LA',
+                                'California (PA)': 'Cal U (PA)',
+                                'Robert Morris-Peoria': 'Roosevelt-Peoria'}
+                if line['school_name'] in name_changes:
+                    line['school_name'] = name_changes[line['school_name']]
+                last_name = line['Player'].split(',', 1)[0].strip()
+                if last_name == '':
+                    no_names += 1
                     continue
+                try:
+                    first_name = line['Player'].split(',', 1)[1].strip()
+                except IndexError:
+                    first_name = 'N/A'
+                try:
+                    roster_id = all_players_by_name.get((first_name, last_name, database_teams[line['school_name']]))
+                    if roster_id is None:
+                        if line['player_id'] != '' and int(line['player_id']) in all_players:
+                            roster_id = Rosters.create_roster(all_players[int(line['player_id'])],
+                                                              database_teams[line['school_name']])
+                            new_rosters += 1
+                        else:
+                            player_id, roster_id = \
+                                Rosters.add_player_and_create_roster(first_name, last_name, line['player_id'],
+                                                                     database_teams[line['school_name']])
+                            all_players_by_name.update({(first_name, last_name,
+                                                         database_teams[line['school_name']]): roster_id})
+                            if line['player_id'] != '':
+                                database_rosters.update({int(line['player_id']): roster_id})
+                                all_players.update({int(line['player_id']): player_id})
+                            new_players += 1
+                            new_rosters += 1
                 except KeyError:
                     unknown_schools.update({(line['school_name'], line['school_id'])})
                     continue
-            if roster_id is None:
-                players_with_bad_id.update({(line['Player'], line['player_id'])})
-                continue
-            
+                except IndexError:
+                    if line['player_id'] != '' and int(line['player_id']) in all_players:
+                        roster_id = Rosters.create_roster(all_players[int(line['player_id'])],
+                                                          database_teams[line['school_name']])
+                        new_rosters += 1
+                    else:
+                        player_id, roster_id = \
+                            Rosters.add_player_and_create_roster(first_name, last_name, line['player_id'],
+                                                                 database_teams[line['school_name']])
+                        all_players_by_name.update({(first_name, last_name,
+                                                     database_teams[line['school_name']]): roster_id})
+                        if line['player_id'] != '':
+                            database_rosters.update({int(line['player_id']): roster_id})
+                            all_players.update({int(line['player_id']): player_id})
+                        new_players += 1
+                        new_rosters += 1
+            except KeyError:
+                name_changes = {'NYIT': 'New York Tech',
+                                'Wheeling Jesuit': 'Wheeling',
+                                'Cal St. LA': 'Cal State LA',
+                                'California (PA)': 'Cal U (PA)',
+                                'Robert Morris-Peoria': 'Roosevelt-Peoria'}
+                if line['school_name'] in name_changes:
+                    line['school_name'] = name_changes[line['school_name']]
+                last_name = line['Player'].split(',', 1)[0].strip()
+                if last_name == '':
+                    no_names += 1
+                    continue
+                try:
+                    first_name = line['Player'].split(',', 1)[1].strip()
+                except IndexError:
+                    first_name = 'N/A'
+                try:
+                    roster_id = all_players_by_name.get((first_name, last_name, database_teams[line['school_name']]))
+                    if roster_id is None:
+                        if line['player_id'] != '' and int(line['player_id']) in all_players:
+                            roster_id = Rosters.create_roster(all_players[int(line['player_id'])],
+                                                              database_teams[line['school_name']])
+                            database_rosters.update({int(line['player_id']): all_players[int(line['player_id'])]})
+                            all_players_by_name.update({(first_name, last_name,
+                                                         database_teams[line['school_name']]): roster_id})
+                            new_rosters += 1
+                        else:
+                            player_id, roster_id = \
+                                Rosters.add_player_and_create_roster(first_name, last_name, line['player_id'],
+                                                                     database_teams[line['school_name']])
+                            all_players_by_name.update({(first_name, last_name,
+                                                         database_teams[line['school_name']]): roster_id})
+                            if line['player_id'] != '':
+                                database_rosters.update({int(line['player_id']): roster_id})
+                                all_players.update({int(line['player_id']): player_id})
+                            new_players += 1
+                            new_rosters += 1
+                except KeyError:
+                    unknown_schools.update({(line['school_name'], line['school_id'])})
+                    continue
+                except IndexError:
+                    if line['player_id'] != '' and int(line['player_id']) in all_players:
+                        roster_id = Rosters.create_roster(all_players[int(line['player_id'])],
+                                                          database_teams[line['school_name']])
+                        database_rosters.update({int(line['player_id']): all_players[int(line['player_id'])]})
+                        all_players_by_name.update({(first_name, last_name,
+                                                     database_teams[line['school_name']]): roster_id})
+                        new_rosters += 1
+                    else:
+                        player_id, roster_id = \
+                            Rosters.add_player_and_create_roster(first_name, last_name, line['player_id'],
+                                                                 database_teams[line['school_name']])
+                        all_players_by_name.update({(first_name, last_name,
+                                                     database_teams[line['school_name']]): roster_id})
+                        if line['player_id'] != '':
+                            database_rosters.update({int(line['player_id']): roster_id})
+                            all_players.update({int(line['player_id']): player_id})
+                        new_players += 1
+                        new_rosters += 1
             if (game_id, roster_id) in database_game_positions:
                 continue
             
@@ -258,11 +398,10 @@ def create_game_positions(year, division):
     Database.copy_expert('game_position(game_id, roster_id, position)', 'positions', header,
                          new_positions)
 
-    print('{num_positions} position relations created, {bad_ids} with bad id. {no_ids} with no id. {unknown_schools} '
-          'unknown_schools.'.format(num_positions=len(new_positions), bad_ids=len(players_with_bad_id),
-                                    no_ids=players_with_no_id, unknown_schools=len(unknown_schools)))
-    print(players_with_bad_id)
-    print(unknown_schools)
+    print('{num_positions} position relations created. {new_players} players added. {new_rosters} roster relations '
+          'created. {no_names} players with no name. {unknown_schools} unknown schools.'
+          .format(num_positions=len(new_positions), new_players=new_players, new_rosters=new_rosters,
+                  no_names=no_names, unknown_schools=len(unknown_schools)))
 
 
 def copy_box_score_lines(year, division):
@@ -305,41 +444,81 @@ def copy_box_score_lines(year, division):
     
     for stat_type in ['hitting', 'pitching', 'fielding']:
         print('Copying {stat_type} box scores... '.format(stat_type=stat_type), end='')
-        
+    
         database_box_score_lines = {(line[0], line[1]): None for
                                     line in Database.get_all_box_score_lines(stat_type)}
-        
+    
         stat_file_name = 'box_score_' + stat_type
         box_score_file_name = FileUtils.get_scrape_file_name(year, division, stat_file_name)
-        
+    
         new_box_score_lines = []
-
-        players_with_bad_id = 0
-        players_with_no_id = 0
-        
+    
+        no_names = 0
+        no_roster_id = 0
+    
+        unknown_schools = set()
+    
         with open(box_score_file_name, 'rb') as box_score_file:
             reader = unicodecsv.DictReader(box_score_file)
             reader.fieldnames = [field.lower() for field in reader.fieldnames]
             for line in reader:
                 if line['player'] == 'Totals':
                     continue
-                
+            
                 game_id = database_games[int(line['game_id'])]
-
+            
                 try:
                     roster_id = database_rosters[int(line['player_id'])]
-                except (KeyError, ValueError):
+                except ValueError:
+                    name_changes = {'NYIT': 'New York Tech',
+                                    'Wheeling Jesuit': 'Wheeling',
+                                    'Cal St. LA': 'Cal State LA',
+                                    'California (PA)': 'Cal U (PA)',
+                                    'Robert Morris-Peoria': 'Roosevelt-Peoria'}
+                    if line['school_name'] in name_changes:
+                        line['school_name'] = name_changes[line['school_name']]
+                    last_name = line['player'].split(',', 1)[0].strip()
+                    if last_name == '':
+                        no_names += 1
+                        continue
+                    try:
+                        first_name = line['player'].split(',', 1)[1].strip()
+                    except IndexError:
+                        first_name = 'N/A'
                     try:
                         roster_id = all_players_by_name.get(
-                            (line['player'].split(',', 1)[1].strip(),
-                             line['player'].split(',', 1)[0].strip(),
-                             database_teams[line['school_name']]))
-                    except IndexError:
-                        players_with_no_id += 1
+                            (first_name, last_name, database_teams[line['school_name']]))
+                        if roster_id is None:
+                            no_roster_id += 1
+                            continue
+                    except KeyError:
+                        unknown_schools.update({(line['school_name'], line['school_id'])})
                         continue
-                if roster_id is None:
-                    players_with_bad_id += 1
-                    continue
+                except KeyError:
+                    name_changes = {'NYIT': 'New York Tech',
+                                    'Wheeling Jesuit': 'Wheeling',
+                                    'Cal St. LA': 'Cal State LA',
+                                    'California (PA)': 'Cal U (PA)',
+                                    'Robert Morris-Peoria': 'Roosevelt-Peoria'}
+                    if line['school_name'] in name_changes:
+                        line['school_name'] = name_changes[line['school_name']]
+                    last_name = line['player'].split(',', 1)[0].strip()
+                    if last_name == '':
+                        no_names += 1
+                        continue
+                    try:
+                        first_name = line['player'].split(',', 1)[1].strip()
+                    except IndexError:
+                        first_name = 'N/A'
+                    try:
+                        roster_id = all_players_by_name.get(
+                            (first_name, last_name, database_teams[line['school_name']]))
+                        if roster_id is None:
+                            no_roster_id += 1
+                            continue
+                    except KeyError:
+                        unknown_schools.update({(line['school_name'], line['school_id'])})
+                        continue
                 
                 if (game_id, roster_id) in database_box_score_lines:
                     continue
@@ -364,15 +543,14 @@ def copy_box_score_lines(year, division):
                         # ValueError
                         player_stats[database_stat_headers[stat_type][i]] = re.sub(r'[^\d.]', '',
                                                                                    line[stat])
-
+            
                 new_box_score_lines.append(player_stats)
                 database_box_score_lines.update({(game_id, roster_id): None})
-
+    
         header = ['game_id', 'roster_id'] + database_stat_headers[stat_type]
         Database.copy_expert('{stat_type}_line(game_id, roster_id, {stat_headings})'.format(
             stat_type=stat_type, stat_headings=', '.join(database_stat_headers[stat_type])),
             'box_score_{stat_type}'.format(stat_type=stat_type), header, new_box_score_lines)
-
-        print('{num_lines} new lines. {bad_ids} with bad id. {no_ids} with no id.'
-              .format(num_lines=len(new_box_score_lines), bad_ids=players_with_bad_id,
-                      no_ids=players_with_no_id))
+    
+        print('{num_lines} new lines. {no_name} players with no name. {unknown_schools} unknown schools.'
+              .format(num_lines=len(new_box_score_lines), no_name=no_names, unknown_schools=len(unknown_schools)))
