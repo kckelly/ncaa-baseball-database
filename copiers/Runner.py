@@ -7,6 +7,7 @@ should always work.
 
 from copiers import Conferences, Schools, Stadiums, Coaches, Teams, Games, \
     DefaultValues, Umpires, Rosters, PlayByPlay
+from ncaadatabase import NCAADatabase
 
 
 def main():
@@ -15,31 +16,32 @@ def main():
 
     :return: None
     """
-    DefaultValues.insert_default_conferences()
-    Schools.copy_schools()
-    years = range(2012, 2020)
-    divisions = [1, 2, 3]
-    for year in years:
-        for division in divisions:
-            if year == 2012 and division != 1:
-                continue
-            if year == 2013 and division == 2:
-                continue
-            print('Year: {}, Division: {}'.format(year, division))
-            Conferences.copy_conferences(year, division)
-            Schools.add_nicknames_and_urls(year, division)
-            Stadiums.copy_stadiums(year, division)
-            Coaches.copy_coaches(year, division)
-            Teams.create_teams(year, division)
-            Rosters.copy_players(year, division)
-            Rosters.create_rosters(year, division)
-            Games.copy_game_info(year, division)
-            Games.create_game_positions(year, division)
-            Games.copy_game_innings(year, division)
-            Games.copy_box_score_lines(year, division)
-            Umpires.copy_umpires(year, division)
-            Umpires.create_umpire_games(year, division)
-            PlayByPlay.copy_play_by_play(year, division)
+    with NCAADatabase() as database:
+        DefaultValues.insert_default_conferences(database)
+        Schools.copy_schools(database)
+        years = range(2012, 2020)
+        divisions = [1, 2, 3]
+        for year in years:
+            for division in divisions:
+                if year == 2012 and division != 1:
+                    continue
+                if year == 2013 and division == 2:
+                    continue
+                print('Year: {}, Division: {}'.format(year, division))
+                Conferences.copy_conferences(database, year, division)
+                Schools.add_nicknames_and_urls(database, year, division)
+                Stadiums.copy_stadiums(database, year, division)
+                Coaches.copy_coaches(database, year, division)
+                Teams.create_teams(database, year, division)
+                Rosters.copy_players(database, year, division)
+                Rosters.create_rosters(database, year, division)
+                Games.copy_game_info(database, year, division)
+                Games.create_game_positions(database, year, division)
+                Games.copy_game_innings(database, year, division)
+                Games.copy_box_score_lines(database, year, division)
+                Umpires.copy_umpires(database, year, division)
+                Umpires.create_umpire_games(database, year, division)
+                PlayByPlay.copy_play_by_play(database, year, division)
 
 
 if __name__ == '__main__':

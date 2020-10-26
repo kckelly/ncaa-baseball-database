@@ -5,11 +5,11 @@ File to copy stadiums scraped by TeamInfo to the database.
 """
 import unicodecsv
 
-import Database
 import FileUtils
+from ncaadatabase import NCAADatabase
 
 
-def copy_stadiums(year, division):
+def copy_stadiums(database: NCAADatabase, year, division):
     """
     Copy the stadium list created by get_team_info() into the database.
 
@@ -18,9 +18,9 @@ def copy_stadiums(year, division):
     :return: None
     """
     print('Copying stadiums... ', end='')
-
-    database_stadiums = set([stadium['name'] for stadium in Database.get_all_stadiums()])
-
+    
+    database_stadiums = set([stadium['name'] for stadium in database.get_all_stadiums()])
+    
     # get new stadiums from this year and division
     new_stadiums = []
     stadium_file_name = FileUtils.get_scrape_file_name(year, division, 'stadiums')
@@ -31,8 +31,8 @@ def copy_stadiums(year, division):
                 new_stadiums.append({'stadium_name': stadium['stadium_name'],
                                      'capacity': stadium['capacity'].replace(',', ''),
                                      'year_built': stadium['year_built']})
-
+    
     header = ['stadium_name', 'capacity', 'year_built']
-    Database.copy_expert('stadium(name, capacity, year_built)', 'stadiums', header, new_stadiums)
-
+    database.copy_expert('stadium(name, capacity, year_built)', 'stadiums', header, new_stadiums)
+    
     print('{} new stadiums.'.format(len(new_stadiums)))

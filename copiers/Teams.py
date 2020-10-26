@@ -6,41 +6,43 @@ the database.
 """
 import unicodecsv
 
-import Database
+from ncaadatabase import NCAADatabase
 import FileUtils
 
 
-def create_teams(year, division):
+def create_teams(database: NCAADatabase, year, division):
     """
     Combine data from the conference, school, coach, and stadium tables to make team relations from
     the year and division specified. Uses the corresponding csvs in scraped-data to ensure the
     relations are correct.
+    
+    :param database: the ncaa database
     :param year: the year of the teams
     :param division: the division of the teams
     :return: None
     """
     print('Creating teams... ', end='')
-
+    
     database_teams = {team['school_ncaa_id'] for team
-                      in Database.get_all_team_info() if team['year'] == year}
+                      in database.get_all_team_info() if team['year'] == year}
     database_teams_by_name = {team['school_name'] for team
-                              in Database.get_all_team_info() if team['year'] == year}
-
+                              in database.get_all_team_info() if team['year'] == year}
+    
     # These dict comprehensions make a mapping of either the name or ncaa_id of each item to the
     # id of that item stored in the database. For instance, database_conferences contains a
     # mapping of conference names to ids from the conference table, so to get the conference id for
     # any one conference you would write conference['conference_name'].
     database_conferences = {conference['name']: conference['id'] for conference
-                            in Database.get_all_conferences() if conference['division'] == division}
+                            in database.get_all_conferences() if conference['division'] == division}
     database_schools = {school['ncaa_id']: school['id'] for school
-                        in Database.get_all_schools()}
+                        in database.get_all_schools()}
     database_schools_by_name = {school['name']: school['id'] for school
-                                in Database.get_all_schools()}
+                                in database.get_all_schools()}
     database_coaches = {coach['ncaa_id']: coach['id'] for coach
-                        in Database.get_all_coaches()}
+                        in database.get_all_coaches()}
     database_stadiums = {stadium['name']: stadium['id'] for stadium
-                         in Database.get_all_stadiums()}
-
+                         in database.get_all_stadiums()}
+    
     team_coaches = {}
     coach_file_name = FileUtils.get_scrape_file_name(year, division, 'coaches')
     with open(coach_file_name, 'rb') as coach_file:
@@ -84,13 +86,13 @@ def create_teams(year, division):
                     coach_id = database_coaches[coach_ncaa_id]
                 else:
                     coach_id = None
-        
+
                 if team_stadiums[school_ncaa_id] != '':
                     stadium_name = team_stadiums[school_ncaa_id]
                     stadium_id = database_stadiums[stadium_name]
                 else:
                     stadium_id = None
-        
+
                 new_teams.append({'year': year,
                                   'conference_id': conference_id,
                                   'school_id': school_id,
@@ -98,7 +100,7 @@ def create_teams(year, division):
                                   'stadium_id': stadium_id})
     
     header = ['year', 'conference_id', 'school_id', 'coach_id', 'stadium_id']
-    Database.copy_expert('team(year, conference_id, school_id, coach_id, stadium_id)',
+    database.copy_expert('team(year, conference_id, school_id, coach_id, stadium_id)',
                          'teams', header, new_teams)
     
     print('{num_teams} new teams.'.format(num_teams=len(new_teams)))

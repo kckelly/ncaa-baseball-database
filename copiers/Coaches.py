@@ -5,11 +5,11 @@ File to copy coaches scraped by TeamInfo to the database.
 """
 import unicodecsv
 
-import Database
 import FileUtils
+from ncaadatabase import NCAADatabase
 
 
-def copy_coaches(year, division):
+def copy_coaches(database: NCAADatabase, year, division):
     """
     Copy the coach list created by get_team_info() into the database.
 
@@ -20,7 +20,7 @@ def copy_coaches(year, division):
     print('Copying coaches... ', end='')
     
     database_coaches = set([(coach['ncaa_id'], coach['first_name'], coach['last_name']) for coach in
-                            Database.get_all_coaches()])
+                            database.get_all_coaches()])
     
     # get new coaches from this year and division
     new_coaches = []
@@ -43,7 +43,7 @@ def copy_coaches(year, division):
                                         'year_graduated': coach['year_graduated']})
     
     header = ['ncaa_id', 'first_name', 'last_name', 'alma_mater', 'year_graduated']
-    Database.copy_expert('coach(ncaa_id, first_name, last_name, alma_mater, year_graduated)',
+    database.copy_expert('coach(ncaa_id, first_name, last_name, alma_mater, year_graduated)',
                          'coaches', header, new_coaches)
     
     print('{} new coaches.'.format(len(new_coaches)))

@@ -5,11 +5,11 @@ Copies all umpire information into the umpire and game_umpire tables.
 """
 import unicodecsv
 
-import Database
 import FileUtils
+from ncaadatabase import NCAADatabase
 
 
-def copy_umpires(year, division):
+def copy_umpires(database: NCAADatabase, year, division):
     """
     Copy umpires from the game_info file in this year and division.
     
@@ -18,12 +18,12 @@ def copy_umpires(year, division):
     :return: None
     """
     print('Copying umpires... ', end='')
-    database_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
+    database_games = {game['ncaa_id']: game['id'] for game in database.get_all_game_info()}
     
     database_umpires = {(umpire['first_name'], umpire['last_name']): umpire['id'] for
-                        umpire in Database.get_all_umpires()}
+                        umpire in database.get_all_umpires()}
     
-    database_umpire_games = Database.get_all_game_umpires()
+    database_umpire_games = database.get_all_game_umpires()
     
     game_info_file_name = FileUtils.get_scrape_file_name(year, division, 'game_info')
     
@@ -51,12 +51,12 @@ def copy_umpires(year, division):
                     database_umpires.update({(ump_first_name, ump_last_name): None})
     
     header = ['first_name', 'last_name']
-    Database.copy_expert('umpire(first_name, last_name)', 'umpires', header, new_umpires)
+    database.copy_expert('umpire(first_name, last_name)', 'umpires', header, new_umpires)
     
     print('{num_umpires} new umpires.'.format(num_umpires=len(new_umpires)))
 
 
-def create_umpire_games(year, division):
+def create_umpire_games(database: NCAADatabase, year, division):
     """
     Create the game to umpire relations in the game_umpire table.
     
@@ -65,12 +65,12 @@ def create_umpire_games(year, division):
     :return: None
     """
     print('Copying umpires... ', end='')
-    database_games = {game['ncaa_id']: game['id'] for game in Database.get_all_game_info()}
+    database_games = {game['ncaa_id']: game['id'] for game in database.get_all_game_info()}
     
     database_umpires = {(umpire['first_name'], umpire['last_name']): umpire['id'] for
-                        umpire in Database.get_all_umpires()}
+                        umpire in database.get_all_umpires()}
     
-    database_umpire_games = Database.get_all_game_umpires()
+    database_umpire_games = database.get_all_game_umpires()
     
     game_info_file_name = FileUtils.get_scrape_file_name(year, division, 'game_info')
     new_umpire_games = []
@@ -95,7 +95,7 @@ def create_umpire_games(year, division):
                                          'position': ump_position.replace('_official', '')})
     
     header = ['game_id', 'umpire_id', 'position']
-    Database.copy_expert('game_umpire(game_id, umpire_id, position)', 'game_umpires', header,
+    database.copy_expert('game_umpire(game_id, umpire_id, position)', 'game_umpires', header,
                          new_umpire_games)
     
     print('{num_umpires} new umpire games.'.format(num_umpires=len(new_umpire_games)))

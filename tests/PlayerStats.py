@@ -4,7 +4,7 @@ directly from the ncaa stats website.
 """
 import unicodecsv
 
-import Database
+import ncaadatabase
 import FileUtils
 
 base_file_name = 'player_{stat_type}_totals'
@@ -25,10 +25,10 @@ def compare_player_stats(year, division):
     incorrect_ids = 0
     database_teams = {team['team_id']: {'ncaa_id': team['school_ncaa_id'],
                                         'school_name': team['school_name']} for team in
-                      Database.get_all_team_info()}
+                      ncaadatabase.get_all_team_info()}
     all_rosters = {roster['roster_id']: {'team_id': roster['team_id'], 'ncaa_id': roster[
         'ncaa_id'], 'first_name': roster['first_name'], 'last_name': roster['last_name']}
-                   for roster in Database.get_all_roster_info() if roster['year'] == year}
+                   for roster in ncaadatabase.get_all_roster_info() if roster['year'] == year}
     headers = {
         'hitting': ['AB', 'H', '2B', '3B', 'HR', 'BB', 'IBB', 'HBP', 'R', 'RBI', 'K', 'SF', 'SH',
                     'DP', 'SB', 'CS'],
@@ -50,7 +50,7 @@ def compare_player_stats(year, division):
         'fielding': {'po': 'PO', 'a': 'A', 'e': 'E', 'pb': 'PB', 'ci': 'CI', 'sb': 'SBA',
                      'cs': 'CSB', 'dp': 'IDP', 'tp': 'TP'}}
     for stat_type in stat_types:
-        database_stats = Database.get_player_year_stats(year, division, stat_type)
+        database_stats = ncaadatabase.get_player_year_stats(year, division, stat_type)
         database_stats_dict = {}
         for row in database_stats:
             roster_info = all_rosters[row['roster_id']]

@@ -5,23 +5,23 @@ File to copy conferences scraped by ConferenceStats to the database.
 """
 import unicodecsv
 
-import Database
 import FileUtils
+from ncaadatabase import NCAADatabase
 
 
-def copy_conferences(year, division):
+def copy_conferences(database: NCAADatabase, year, division):
     """
     Copy the conference list created by get_conference_stats() into the database.
     
+    :param database: the ncaa database
     :param year: the year of the conference file
     :param division: the division of the conference file
     :return: None
     """
     print('Copying conferences... ', end='')
     
-    database_conferences = set(
-        [conference['name'] for conference in
-         Database.get_all_conferences() if conference['division'] == division])
+    database_conferences = set([conference['name'] for conference in
+                                database.get_all_conferences() if conference['division'] == division])
     
     # get new conferences from this year and division
     new_conferences = []
@@ -40,6 +40,6 @@ def copy_conferences(year, division):
                                         'division': division})
     
     header = ['conference_name', 'division']
-    Database.copy_expert('conference(name, division)', 'conferences', header, new_conferences)
+    database.copy_expert('conference(name, division)', 'conferences', header, new_conferences)
     
     print('{} new conferences.'.format(len(new_conferences)))

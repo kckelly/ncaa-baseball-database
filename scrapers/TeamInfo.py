@@ -7,7 +7,7 @@ File to scrape team information, including stadiums, coaches, and schedules.
 import unicodecsv
 
 import DataUtils
-import Database
+import ncaadatabase
 import FileUtils
 import WebUtils
 
@@ -17,14 +17,14 @@ def get_team_info(year, division):
     Get team information about each team in the division that year. This includes stadiums,
     coaches, and schedules. Creates 4 csv files in scraped-data: team_info, stadiums, coaches,
     and schedules.
-    
+
     :param year: the year to get team info
     :param division: the division the teams are in
     :return: None
     """
     base_url = 'https://stats.ncaa.org'
     
-    ids = Database.get_year_info(year)
+    ids = ncaadatabase.get_year_info(year)
     teams_list = DataUtils.get_schools(year, division)
     
     team_info_file_name = FileUtils.get_scrape_file_name(year, division, 'team_info')
@@ -64,7 +64,7 @@ def get_team_info(year, division):
             print('Getting team information and schedules for {school_name}... '.format(
                 school_name=team['school_name']), end='')
             page = WebUtils.get_page(team_url, 0.1, 10)
-            
+
             # school website and nickname
             school_info = page.select_one('legend')
             school_nickname = school_info.text.replace(team['school_name'], '').split('(')[
@@ -77,7 +77,7 @@ def get_team_info(year, division):
                                        'school_id': team['school_id'],
                                        'nickname': school_nickname,
                                        'website': school_website})
-            
+
             # stadium information
             stadium_info = page.select_one('#facility_div').select_one('fieldset').text.strip()
             stadium = {heading: None for heading in stadium_header}
