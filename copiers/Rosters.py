@@ -5,8 +5,8 @@ This file adds all players to the database and creates roster relations.
 """
 import unicodecsv
 
-import FileUtils
-from ncaadatabase import NCAADatabase
+from jmu_baseball_utils import file_utils
+from database_files.ncaa_database import NCAADatabase
 
 
 def copy_players(database: NCAADatabase, year, division):
@@ -24,7 +24,7 @@ def copy_players(database: NCAADatabase, year, division):
                               database.get_all_players()}
     
     new_players = []
-    roster_file_name = FileUtils.get_scrape_file_name(year, division, 'rosters')
+    roster_file_name = file_utils.get_scrape_file_name(year, division, 'rosters')
     with open(roster_file_name, 'rb') as roster_file:
         reader = unicodecsv.DictReader(roster_file)
         for line in reader:
@@ -87,7 +87,7 @@ def create_rosters(database: NCAADatabase, year, division):
     player_class_map = {'fr': 'freshman', 'so': 'sophomore', 'jr': 'junior', 'sr': 'senior',
                         'n/a': 'n/a'}
     new_roster_rows = []
-    roster_file_name = FileUtils.get_scrape_file_name(year, division, 'rosters')
+    roster_file_name = file_utils.get_scrape_file_name(year, division, 'rosters')
     with open(roster_file_name, 'rb') as roster_file:
         reader = unicodecsv.DictReader(roster_file)
         for line in reader:

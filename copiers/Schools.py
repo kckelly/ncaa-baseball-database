@@ -3,11 +3,14 @@ File to copy all school info to the database.
 
 @author: Kevin Kelly
 """
+import os
+
 import unicodecsv
 
-import FileUtils
-import WebUtils
-from ncaadatabase import NCAADatabase
+from copiers import school_name_changes
+from jmu_baseball_utils import file_utils
+from jmu_baseball_utils import web_utils
+from database_files.ncaa_database import NCAADatabase
 
 
 def copy_schools(database: NCAADatabase):
@@ -20,14 +23,19 @@ def copy_schools(database: NCAADatabase):
     """
     print('Copying schools... ', end='')
     
-    database_schools = set([school['ncaa_id'] for school in database.get_all_schools()])
+    database_school_names = set([school['name'] for school in database.get_all_schools()])
+    database_school_ids = set([school['ncaa_id'] for school in database.get_all_schools()])
     
     new_schools = []
-    school_file_name = '../scraped-data/school_ids.csv'
+    school_file_name = 'scraped-data/school_ids.csv'
     with open(school_file_name, 'rb') as school_file:
+        print(os.path.realpath(school_file.name))
         school_reader = unicodecsv.DictReader(school_file)
         for school in school_reader:
-            if int(school['school_id']) not in database_schools:
+            if school['school_name'] in school_name_changes.school_name_changes:
+                school['school_name'] = school_name_changes.school_name_changes[school['school_name']]
+            if school['school_name'] not in database_school_names and int(school['school_id']) not in \
+                    database_school_ids:
                 new_schools.append({'school_id': school['school_id'],
                                     'school_name': school['school_name']})
     
@@ -58,15 +66,19 @@ def add_nicknames_and_urls(database: NCAADatabase, year, division):
     school_updates = []
     
     new_schools = []
-    
-    school_file_name = FileUtils.get_scrape_file_name(year, division, 'team_info')
+
+    school_file_name = file_utils.get_scrape_file_name(year, division, 'team_info')
     with open(school_file_name, 'rb') as school_file:
         school_reader = unicodecsv.DictReader(school_file)
         for school in school_reader:
+            if school['school_name'] in school_name_changes.school_name_changes:
+                school['school_name'] = school_name_changes.school_name_changes[school['school_name']]
+            # some of the nicknames contain the school name, we remove it here
+            school['nickname'] = school['nickname'].replace(school['school_name'], '').strip()
             database_school = database_schools.get(int(school['school_id']))
             if database_school is None:
                 database_school = database_schools_by_name.get(school['school_name'])
-    
+        
                 if database_school is None:
                     new_schools.append({'ncaa_id': school['school_id'],
                                         'name': school['school_name'],
@@ -91,7 +103,6 @@ def add_nicknames_and_urls(database: NCAADatabase, year, division):
                        'WHERE school.ncaa_id = %s', (update['school_nickname'],
                                                      update['school_url'],
                                                      update['school_ncaa_id']))
-    
     print('{updates} schools updated.'.format(updates=len(school_updates)))
 
 
@@ -118,6 +129,7 @@ def find_and_add_other_school(database: NCAADatabase, name, team_sport_id):
     """
     Scrape and add the school with this team_sport_id to the database. Should only be used when a
     school is not already in the database, which should only be for non-NCAA schools.
+    :param database: the ncaa database
     :param name: the name of the school
     :param team_sport_id: the team_sport_id of the school, acquired from the team link in a box
     score
@@ -125,7 +137,7 @@ def find_and_add_other_school(database: NCAADatabase, name, team_sport_id):
     """
     url = 'https://stats.ncaa.org/teams/{}'.format(team_sport_id)
     print(url)
-    page = WebUtils.get_page(url, 0.1, 10)
+    page = web_utils.get_page(url, 0.1, 10)
     
     for link in page.select('a'):
         if link.text == 'Team History':

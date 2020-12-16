@@ -5,8 +5,8 @@ File to copy conferences scraped by ConferenceStats to the database.
 """
 import unicodecsv
 
-import FileUtils
-from ncaadatabase import NCAADatabase
+from jmu_baseball_utils import file_utils
+from database_files.ncaa_database import NCAADatabase
 
 
 def copy_conferences(database: NCAADatabase, year, division):
@@ -25,7 +25,7 @@ def copy_conferences(database: NCAADatabase, year, division):
     
     # get new conferences from this year and division
     new_conferences = []
-    conference_file_name = FileUtils.get_scrape_file_name(year, division, 'conferences')
+    conference_file_name = file_utils.get_scrape_file_name(year, division, 'conferences')
     with open(conference_file_name, 'rb') as conference_file:
         conference_reader = unicodecsv.DictReader(conference_file)
         for conference in conference_reader:

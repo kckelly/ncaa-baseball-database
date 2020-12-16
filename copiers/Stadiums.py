@@ -5,8 +5,8 @@ File to copy stadiums scraped by TeamInfo to the database.
 """
 import unicodecsv
 
-import FileUtils
-from ncaadatabase import NCAADatabase
+from jmu_baseball_utils import file_utils
+from database_files.ncaa_database import NCAADatabase
 
 
 def copy_stadiums(database: NCAADatabase, year, division):
@@ -23,7 +23,7 @@ def copy_stadiums(database: NCAADatabase, year, division):
     
     # get new stadiums from this year and division
     new_stadiums = []
-    stadium_file_name = FileUtils.get_scrape_file_name(year, division, 'stadiums')
+    stadium_file_name = file_utils.get_scrape_file_name(year, division, 'stadiums')
     with open(stadium_file_name, 'rb') as stadium_file:
         stadium_reader = unicodecsv.DictReader(stadium_file)
         for stadium in stadium_reader:

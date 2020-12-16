@@ -5,8 +5,8 @@ Copies all umpire information into the umpire and game_umpire tables.
 """
 import unicodecsv
 
-import FileUtils
-from ncaadatabase import NCAADatabase
+from jmu_baseball_utils import file_utils
+from database_files.ncaa_database import NCAADatabase
 
 
 def copy_umpires(database: NCAADatabase, year, division):
@@ -25,7 +25,7 @@ def copy_umpires(database: NCAADatabase, year, division):
     
     database_umpire_games = database.get_all_game_umpires()
     
-    game_info_file_name = FileUtils.get_scrape_file_name(year, division, 'game_info')
+    game_info_file_name = file_utils.get_scrape_file_name(year, division, 'game_info')
     
     new_umpires = []
     with open(game_info_file_name, 'rb') as game_info_file:
@@ -71,8 +71,8 @@ def create_umpire_games(database: NCAADatabase, year, division):
                         umpire in database.get_all_umpires()}
     
     database_umpire_games = database.get_all_game_umpires()
-    
-    game_info_file_name = FileUtils.get_scrape_file_name(year, division, 'game_info')
+
+    game_info_file_name = file_utils.get_scrape_file_name(year, division, 'game_info')
     new_umpire_games = []
     with open(game_info_file_name, 'rb') as game_info_file:
         reader = unicodecsv.DictReader(game_info_file)

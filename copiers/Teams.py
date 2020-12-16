@@ -6,8 +6,8 @@ the database.
 """
 import unicodecsv
 
-from ncaadatabase import NCAADatabase
-import FileUtils
+from database_files.ncaa_database import NCAADatabase
+from jmu_baseball_utils import file_utils
 
 
 def create_teams(database: NCAADatabase, year, division):
@@ -44,7 +44,7 @@ def create_teams(database: NCAADatabase, year, division):
                          in database.get_all_stadiums()}
     
     team_coaches = {}
-    coach_file_name = FileUtils.get_scrape_file_name(year, division, 'coaches')
+    coach_file_name = file_utils.get_scrape_file_name(year, division, 'coaches')
     with open(coach_file_name, 'rb') as coach_file:
         coach_reader = unicodecsv.DictReader(coach_file)
         for coach in coach_reader:
@@ -54,14 +54,14 @@ def create_teams(database: NCAADatabase, year, division):
                 team_coaches.update({int(coach['school_id']): int(coach['coach_id'])})
     
     team_stadiums = {}
-    stadiums_file_name = FileUtils.get_scrape_file_name(year, division, 'stadiums')
+    stadiums_file_name = file_utils.get_scrape_file_name(year, division, 'stadiums')
     with open(stadiums_file_name, 'rb') as stadiums_file:
         stadiums_reader = unicodecsv.DictReader(stadiums_file)
         for stadium in stadiums_reader:
             team_stadiums.update({int(stadium['school_id']): stadium['stadium_name']})
     
     new_teams = []
-    team_file_name = FileUtils.get_scrape_file_name(year, division, 'conference_teams')
+    team_file_name = file_utils.get_scrape_file_name(year, division, 'conference_teams')
     with open(team_file_name, 'rb') as team_file:
         team_reader = unicodecsv.DictReader(team_file)
         for team in team_reader:
@@ -74,13 +74,15 @@ def create_teams(database: NCAADatabase, year, division):
                     team['conference_name'] = 'MWC'
                 if team['conference_name'] == 'MWC' and division == 3:
                     team['conference_name'] = 'Midwest Conference'
+                if team['conference_name'] == 'NYIT':
+                    team['conference_name'] = 'Independent'
                 conference_id = database_conferences[team['conference_name']]
-
+    
                 try:
                     school_id = database_schools[school_ncaa_id]
                 except KeyError:
                     school_id = database_schools_by_name[team['school_name']]
-
+    
                 if team_coaches[school_ncaa_id] is not None:
                     coach_ncaa_id = team_coaches[school_ncaa_id]
                     coach_id = database_coaches[coach_ncaa_id]
